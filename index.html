@@ -622,11 +622,21 @@ function nelderMead(f, x0, step, iters) {
 function runFit(m, extra = []) {
   const KEYS_ = FIT_KEYS.concat(extra);
   const Hb = m.height, base = { ...P, H: Hb + P.lens_h };
+  // ponto de partida tirado da própria medida: evita cair numa combinação parecida mas errada
+  const near = z => m.pts.reduce((a, q) => Math.abs(q.z - z) < Math.abs(a.z - z) ? q : a, m.pts[0]).r;
+  const top = m.pts.reduce((a, q) => q.r > a.r ? q : a, m.pts[0]);
+  base.D = 2 * top.r; base.bottom_d = 2 * near(P.lip_h + 1); base.lens_d = Math.min(base.D, 2 * near(Hb - 0.8));
+  base.groove_z = top.z; base.shoulder_z = top.z; base.skirt_bulge = 0; base.skirt_bulge_pos = 0.5; base.skirt_curve = 1; base.ressalto = 0;
   const bounds = KEYS_.map(k => (k === 'groove_z' || k === 'shoulder_z') ? [5, Hb - 1] : RANGE[k]);
   const toP = u => { const q = { ...base }; KEYS_.forEach((k, i) => { const [a, b] = bounds[i]; q[k] = a + (b - a) * Math.min(1, Math.max(0, u[i])); }); q.lens_d = Math.min(q.lens_d, q.D); return q; };
   const f = u => fitError(toP(u), m) + u.reduce((s, v) => s + (v < 0 ? -v : v > 1 ? v - 1 : 0), 0);
   let u = KEYS_.map((k, i) => { const [a, b] = bounds[i]; return (Math.min(b, Math.max(a, base[k])) - a) / (b - a); }), best = null;
-  for (let r = 0; r < 4; r++) { const res = nelderMead(f, u, r ? 0.08 : 0.2, 700); if (!best || res.f < best.f) best = res; u = best.x; }
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let r = 0; r < 10; r++) {
+    const start = r < 2 ? u : best.x.map(v => v + (rnd() - 0.5) * 0.3);
+    const res = nelderMead(f, start, r ? 0.1 : 0.2, 800); if (!best || res.f < best.f) best = res;
+    if (r === 1) u = best.x;
+  }
   const q = toP(best.x);
   const round = (k, v) => { const st = SPEC.flatMap(([, it]) => it).find(i => i[0] === k)[4]; return +(Math.round(v / st) * st).toFixed(3); };
   KEYS_.forEach(k => { q[k] = round(k, q[k]); }); q.H = round('H', q.H);
