@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada da Manopla Corcel GT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: bancada de oficina — painel de ajustes à esquerda, peça 3D e prancheta de perfil lado a lado */
+:root {
+  --bg: #e9ecee; --panel: #f7f8f9; --ink: #16191b; --muted: #5d666c; --line: #cfd5d9;
+  --accent: #a3232a; --chrome: #b9c0c5; --grid: #d8dde0; --grid-strong: #aeb6bb; --body: #141414;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121517; --panel: #1b1f22; --ink: #e6e9eb; --muted: #97a1a7; --line: #2d3338;
+  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121517; --panel: #1b1f22; --ink: #e6e9eb; --muted: #97a1a7; --line: #2d3338;
+  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; }
+.wrap { padding: 16px; display: grid; gap: 16px; grid-template-columns: 300px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; min-height: 100%; box-sizing: border-box; }
+header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.controls { padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; max-height: calc(100vh - 110px); }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+legend { font-family: var(--f-display); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 0 4px; }
+.row { display: grid; grid-template-columns: 1fr 64px; gap: 4px 8px; align-items: center; }
+.row label { font-size: 13px; }
+.row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.row input[type=number] { font-family: var(--f-mono); font-size: 13px; width: 100%; box-sizing: border-box; padding: 2px 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button, .file { font: 500 13px var(--f-body); padding: 7px 12px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:focus-visible, input:focus-visible, .file:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.view { display: flex; flex-direction: column; min-height: 420px; }
+.view h2 { font-family: var(--f-display); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.view h2 small { font-family: var(--f-mono); text-transform: none; letter-spacing: 0; font-weight: 400; }
+#three { flex: 1; min-height: 360px; position: relative; }
+#three canvas { display: block; width: 100%; height: 100%; }
+#profile { flex: 1; min-height: 360px; width: 100%; }
+.overlay { padding: 10px 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.overlay .row { grid-template-columns: 1fr 64px; }
+.file input { display: none; }
+.hint { color: var(--muted); font-size: 12px; margin: 0; }
+pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; margin: 0; white-space: pre; overflow-x: auto; }
+.linkbox { width: 100%; box-sizing: border-box; font: 12px var(--f-mono); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); }
+.vsave { display: flex; gap: 8px; }
+.vsave input { flex: 1; min-width: 0; font: 13px var(--f-body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
+.vlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.vlist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; }
+.vlist li.cur { border-color: var(--accent); }
+.vlist b { font-weight: 500; overflow-wrap: anywhere; }
+.vlist small { display: block; color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.vlist button { padding: 4px 8px; font-size: 12px; }
+.vlist button.danger { color: var(--accent); }
+.toast { color: var(--accent); font-size: 12px; min-height: 1em; }
+.dim { font-family: var(--f-mono); font-size: 2.6px; fill: var(--accent); }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp { grid-column: auto; } .controls { max-height: none; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Manopla <span>Corcel GT</span></h1>
+    <p>Mexa nas medidas (em mm) e veja a peça e o perfil mudarem na hora. Os valores iniciais são estimados pelo vídeo. Troque pelos medidos com paquímetro.</p>
+  </header>
+
+  <section class="panel controls" aria-label="Medidas">
+    <fieldset>
+      <legend>Versões</legend>
+      <div class="vsave">
+        <input type="text" id="vname" placeholder="Nome da versão" aria-label="Nome da versão">
+        <button class="primary" id="vsave">Salvar versão</button>
+      </div>
+      <ol id="vlist" class="vlist"></ol>
+      <p class="hint" id="vempty">Nenhuma versão salva. Salve o estado atual das medidas para voltar a ele depois.</p>
+    </fieldset>
+    <div id="fields"></div>
+    <fieldset>
+      <legend>Compartilhar e exportar</legend>
+      <input type="text" id="link" readonly aria-label="Link com as medidas" class="linkbox">
+      <div class="btns">
+        <button class="primary" id="copylink">Copiar link</button>
+      </div>
+      <p class="hint">O link leva as medidas junto. Quem abrir vê a peça exatamente assim./p>
+      <pre id="out"></pre>
+      <div class="btns">
+        <button id="copy">Copiar medidas</button>
+        <button id="reset">Voltar ao padrão</button>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+      <p class="hint">Cole o bloco no topo do manopla-corcel.scad, ou mande para mim.</p>
+    </fieldset>
+  </section>
+
+  <section class="panel view v3">
+    <h2>Peça <small>arraste para girar · role para zoom</small></h2>
+    <div id="three"></div>
+  </section>
+
+  <section class="panel view vp">
+    <h2>Perfil em corte <small id="scaleinfo">grade 1 mm / 10 mm</small></h2>
+    <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
+    <div class="overlay">
+      <div class="btns">
+        <label class="file">Sobrepor foto de perfil<input type="file" id="photo" accept="image/*"></label>
+        <button id="clearphoto">Tirar foto</button>
+      </div>
+      <div id="ovfields"></div>
+      <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 6, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1 };
+const SPEC = [
+  ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05]]],
+  ['Ombro', [['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
+  ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 2, 15, 0.5], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1]]],
+  ['Friso', [['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
+  ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
+  ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
+];
+const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -60, 60, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05]];
+const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 0, ov_rot: 0, ov_op: 0.5 };
+
+let P = { ...DEFAULTS }, O = { ...OVDEF }, photoURL = null, photoSize = [1, 1];
+try { Object.assign(P, JSON.parse(localStorage.getItem('manopla-params') || '{}')); } catch (e) {}
+
+// medidas no link: #m1_56_44_... na ordem de DEFAULTS (o visualizador só repassa âncoras simples, sem "=")
+const PAGE_URL = 'https://claude.ai/artifact/8zUaEeTtHt5UJs2pPi4VAG';
+const KEYS = Object.keys(DEFAULTS);
+function encodeHash(p) { return 'm1_' + KEYS.map(k => +(+p[k]).toFixed(3)).join('_'); }
+function readHash() {
+  const m = /^#?m1_([-0-9._]+)$/.exec(location.hash); if (!m) return false;
+  const v = m[1].split('_').map(Number);
+  if (v.length !== KEYS.length || v.some(x => !isFinite(x))) return false;
+  KEYS.forEach((k, i) => { P[k] = v[i]; });
+  return true;
+}
+const fromLink = readHash();
+// fora do visualizador do Claude (GitHub Pages ou arquivo local) o link aponta para a própria página
+const OWN_URL = location.protocol === 'file:' || /github\.io$/.test(location.hostname);
+function shareLink() { return (OWN_URL ? location.href.split('#')[0] : PAGE_URL) + '#' + encodeHash(P); }
+
+function buildFields(host, spec, obj, onChange) {
+  const groups = Array.isArray(spec[0][1]) ? spec : [[null, spec]];
+  for (const [title, items] of groups) {
+    const fs = document.createElement('fieldset');
+    if (title) fs.innerHTML = `<legend>${title}</legend>`;
+    for (const [key, label, min, max, step] of items) {
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<label for="n_${key}">${label}</label><input type="number" id="n_${key}" min="${min}" max="${max}" step="${step}"><input type="range" id="r_${key}" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
+      const n = row.querySelector('input[type=number]'), r = row.querySelector('input[type=range]');
+      n.value = r.value = obj[key];
+      const set = v => { v = parseFloat(v); if (isNaN(v)) return; obj[key] = v; n.value = r.value = v; onChange(); };
+      r.addEventListener('input', e => set(e.target.value));
+      n.addEventListener('change', e => set(e.target.value));
+      fs.appendChild(row);
+    }
+    host.appendChild(fs);
+  }
+}
+function syncFields(obj) { for (const k in obj) { const n = document.getElementById('n_' + k), r = document.getElementById('r_' + k); if (n) n.value = r.value = obj[k]; } }
+
+// mesma geometria do manopla-corcel.scad: pontos [raio, altura, raio_do_arredondamento]
+function fillet(pts) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const [x, y, r = 0] = pts[i];
+    if (!r || i === 0 || i === n - 1) { out.push([x, y]); continue; }
+    const A = pts[i - 1], B = pts[i + 1];
+    const ax = A[0] - x, ay = A[1] - y, bx = B[0] - x, by = B[1] - y;
+    const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+    if (la < 1e-6 || lb < 1e-6) { out.push([x, y]); continue; }
+    const u1 = [ax / la, ay / la], u2 = [bx / lb, by / lb];
+    const th = Math.acos(Math.max(-1, Math.min(1, u1[0] * u2[0] + u1[1] * u2[1])));
+    if (th > Math.PI * 0.995 || th < 1e-3) { out.push([x, y]); continue; }
+    const d = Math.min(r / Math.tan(th / 2), la / 2, lb / 2), rr = d * Math.tan(th / 2);
+    const bl = Math.hypot(u1[0] + u2[0], u1[1] + u2[1]), k = rr / Math.sin(th / 2);
+    const c = [x + (u1[0] + u2[0]) / bl * k, y + (u1[1] + u2[1]) / bl * k];
+    const a1 = Math.atan2(y + u1[1] * d - c[1], x + u1[0] * d - c[0]);
+    const a2 = Math.atan2(y + u2[1] * d - c[1], x + u2[0] * d - c[0]);
+    const da = ((a2 - a1 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI, steps = Math.max(2, Math.ceil(Math.abs(da) / (Math.PI / 18)));
+    for (let j = 0; j <= steps; j++) { const a = a1 + da * j / steps; out.push([c[0] + rr * Math.cos(a), c[1] + rr * Math.sin(a)]); }
+  }
+  return out;
+}
+function profile(p) {
+  const R = p.D / 2, Rl = p.lens_d / 2, Rb = p.bottom_d / 2, Hb = p.H - p.lens_h;
+  const Rs = R - p.ressalto, g0 = p.groove_z - p.groove_w / 2, g1 = p.groove_z + p.groove_w / 2, Rgi = Math.min(Rs, R) - p.groove_depth;
+  const raw = [[0, 0]];
+  if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
+  else raw.push([Rb, 0, p.r_base]);
+  const N = 24;
+  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve), p.lip_h + (g0 - p.lip_h) * t, i === N ? p.r_groove : 0]); }
+  raw.push([Rgi, g0, p.r_groove], [Rgi, g1, p.r_groove]);
+  // ombro: Bézier que sai em pé do friso e chega na borda da lente no ângulo escolhido
+  const L = Math.hypot(R - Rl, Hb - g1), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
+  const P0 = [R, g1], P1 = [R, g1 + f * (Hb - g1)], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24, u = 1 - t, b = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+    raw.push([b[0] * P0[0] + b[1] * P1[0] + b[2] * P2[0] + b[3] * P3[0], b[0] * P0[1] + b[1] * P1[1] + b[2] * P2[1] + b[3] * P3[1], i === 0 ? p.r_groove : 0]);
+  }
+  raw.push([0, Hb]);
+  return { pts: fillet(raw), Hb, R, Rl, Rb };
+}
+// lente: lateral reta (base -> topo), borda arredondada tangente a uma calota esférica
+function lensProfile(p) {
+  const Rl = p.lens_d / 2, a = p.lens_top_d / 2, h = p.lens_h, dome = p.lens_dome;
+  const r = Math.max(0, Math.min(p.r_lens, a * 0.9, h * 0.9));
+  const pts = [[0, 0], [Rl, 0]];
+  if (dome < 0.01) {
+    pts.push([a, h - r]);
+    for (let i = 1; i <= 12; i++) { const q = i / 12 * Math.PI / 2; pts.push([a - r + r * Math.cos(q), h - r + r * Math.sin(q)]); }
+    pts.push([0, h]);
+    return pts;
+  }
+  const Rs = (a * a + dome * dome) / (2 * dome), zc = h + dome - Rs;
+  const cx = a - r, cz = zc + Math.sqrt(Math.max(0, (Rs - r) ** 2 - cx * cx));
+  const beta = Math.atan2(cz - zc, cx);
+  pts.push([a, cz]);
+  for (let i = 1; i <= 12; i++) { const q = beta * i / 12; pts.push([cx + r * Math.cos(q), cz + r * Math.sin(q)]); }
+  const g0 = Math.atan2(pts[pts.length - 1][1] - zc, pts[pts.length - 1][0]);
+  for (let i = 1; i <= 24; i++) { const q = g0 + (Math.PI / 2 - g0) * i / 24; pts.push([Rs * Math.cos(q), zc + Rs * Math.sin(q)]); }
+  pts[pts.length - 1][0] = 0;
+  return pts;
+}
+
+function problems(p) {
+  const out = [];
+  if (p.groove_z + p.groove_w / 2 >= p.H - p.lens_h - 1) out.push('friso acima do topo do corpo');
+  if (p.groove_z - p.groove_w / 2 <= p.lip_h + 1) out.push('friso abaixo da aba');
+  if (p.lens_d > p.D) out.push('lente maior que o ombro');
+  if (p.bore_d >= p.bottom_d) out.push('furo maior que a base');
+  if (p.bore_h >= p.H - p.lens_h) out.push('furo atravessa o topo');
+  return out;
+}
+
+/* ---------- 3D ---------- */
+const host3 = document.getElementById('three');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+host3.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 1, 1000);
+camera.position.set(95, 70, 120);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 28, 0); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(60, 120, 80); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 0.6); rim.position.set(-80, 40, -60); scene.add(rim);
+
+function discTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d'), s = 512 / 100;
+  g.translate(256, 256); g.scale(s, s);
+  g.fillStyle = '#F4F1E8'; g.beginPath(); g.arc(0, 0, 50, 0, 7); g.fill();
+  g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip();
+  g.fillStyle = '#A3232A'; g.fillRect(-10.5, -60, 21, 120); g.fillRect(-16.6, -60, 3.8, 120); g.fillRect(12.8, -60, 3.8, 120);
+  g.restore();
+  g.strokeStyle = '#1A1A1A'; g.lineWidth = 2.6; g.lineCap = 'butt';
+  [[-37, -2, 29, -2], [-29, -11, -29, 10], [-37, -3.3, -37, 10], [29, -11, 29, 10]].forEach(([a, b, x, y]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); });
+  g.fillStyle = '#1A1A1A'; g.font = '500 9.5px Helvetica, Arial, sans-serif'; g.textAlign = 'center';
+  [['1', -29, -13.5], ['R', -37.5, 21], ['2', -28.5, 21], ['3', 29, -13.5], ['4', 29, 21]].forEach(([t, x, y]) => g.fillText(t, x, y));
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4; return tex;
+}
+const matBody = new THREE.MeshPhysicalMaterial({ color: 0x0c0c0c, roughness: 0.28, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.12, side: THREE.DoubleSide });
+const matLens = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.28, clearcoat: 1, depthWrite: false });
+const matRing = new THREE.MeshStandardMaterial({ color: 0xd7dde2, metalness: 0.9, roughness: 0.22 });
+const matDisc = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.7 });
+let part = new THREE.Group(); scene.add(part);
+
+function build3D(p) {
+  part.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  scene.remove(part); part = new THREE.Group();
+  const { pts, Hb, Rl } = profile(p);
+  part.add(new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 160), matBody));
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(Rl - 1.3, 96), matDisc);
+  disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI; disc.position.y = Hb + 0.05; part.add(disc);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(Rl - 1.1, Rl - 1.1, Math.min(2.5, p.lens_h * 0.6), 128, 1, true), matRing);
+  ring.position.y = Hb + Math.min(2.5, p.lens_h * 0.6) / 2; part.add(ring);
+  const lp = lensProfile(p).map(([r, z]) => new THREE.Vector2(r, z + Hb));
+  part.add(new THREE.Mesh(new THREE.LatheGeometry(lp, 160), matLens));
+  scene.add(part);
+  controls.target.set(0, p.H / 2, 0);
+}
+
+function themeBg() { return getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || '#f7f8f9'; }
+function resize() {
+  const w = host3.clientWidth, h = host3.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host3);
+function applyTheme() { scene.background = new THREE.Color(themeBg()); }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); drawProfile(P); });
+new MutationObserver(() => { applyTheme(); drawProfile(P); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+(function loop() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
+
+/* ---------- perfil 2D ---------- */
+const svg = document.getElementById('profile');
+function drawProfile(p) {
+  const { pts, Hb, R, Rb } = profile(p);
+  const W = Math.ceil(Math.max(p.D, 40) / 2 + 22) * 2, top = p.H + 14, bottom = -10;
+  const x0 = -W / 2, y0 = -top, h = top - bottom;
+  svg.setAttribute('viewBox', `${x0} ${y0} ${W} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  let g = '';
+  for (let x = Math.ceil(x0); x <= x0 + W; x++) g += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + h}" stroke="var(--${x % 10 ? 'grid' : 'grid-strong'})" stroke-width="${x % 10 ? 0.08 : 0.18}"/>`;
+  for (let y = Math.ceil(y0); y <= y0 + h; y++) g += `<line x1="${x0}" y1="${y}" x2="${x0 + W}" y2="${y}" stroke="var(--${y % 10 ? 'grid' : 'grid-strong'})" stroke-width="${y % 10 ? 0.08 : 0.18}"/>`;
+  let img = '';
+  if (photoURL) {
+    const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale;
+    img = `<image href="${photoURL}" x="${-iw / 2 + O.ov_x}" y="${-p.H / 2 - ih / 2 - O.ov_y}" width="${iw}" height="${ih}" opacity="${O.ov_op}" transform="rotate(${O.ov_rot} ${O.ov_x} ${-p.H / 2 - O.ov_y})" preserveAspectRatio="none"/>`;
+  }
+  const right = pts.map(([r, z]) => `${r.toFixed(2)},${(-z).toFixed(2)}`);
+  const left = pts.slice().reverse().map(([r, z]) => `${(-r).toFixed(2)},${(-z).toFixed(2)}`);
+  const body = `<polygon points="${right.concat(left).join(' ')}" fill="var(--body)" fill-opacity="${photoURL ? 0.35 : 0.9}" stroke="var(--ink)" stroke-width="0.25"/>`;
+  const Rl = p.lens_d / 2;
+  const lp = lensProfile(p), lr = lp.map(([r, z]) => `${r.toFixed(2)},${(-(z + Hb)).toFixed(2)}`), ll = lp.slice().reverse().map(([r, z]) => `${(-r).toFixed(2)},${(-(z + Hb)).toFixed(2)}`);
+  const lens = `<polygon points="${lr.concat(ll).join(' ')}" fill="var(--chrome)" fill-opacity="0.35" stroke="var(--chrome)" stroke-width="0.3"/>`;
+  const bore = `<rect x="${-p.bore_d / 2}" y="${-p.bore_h}" width="${p.bore_d}" height="${p.bore_h}" fill="var(--panel)" fill-opacity="${photoURL ? 0 : 0.95}" stroke="var(--accent)" stroke-width="0.25" stroke-dasharray="1 0.6"/>`;
+  const axis = `<line x1="0" y1="${y0}" x2="0" y2="${y0 + h}" stroke="var(--accent)" stroke-width="0.15" stroke-dasharray="3 1 0.5 1"/>`;
+  const dx = R + 6;
+  const dims = `
+    <g stroke="var(--accent)" stroke-width="0.18" fill="none">
+      <line x1="${dx}" y1="0" x2="${dx}" y2="${-p.H}"/><line x1="${dx - 1.5}" y1="0" x2="${dx + 1.5}" y2="0"/><line x1="${dx - 1.5}" y1="${-p.H}" x2="${dx + 1.5}" y2="${-p.H}"/>
+      <line x1="${-R}" y1="${-p.H - 5}" x2="${R}" y2="${-p.H - 5}"/><line x1="${-R}" y1="${-p.H - 6.5}" x2="${-R}" y2="${-p.H - 3.5}"/><line x1="${R}" y1="${-p.H - 6.5}" x2="${R}" y2="${-p.H - 3.5}"/>
+      <line x1="${-Rb}" y1="5" x2="${Rb}" y2="5"/><line x1="${-Rb}" y1="3.5" x2="${-Rb}" y2="6.5"/><line x1="${Rb}" y1="3.5" x2="${Rb}" y2="6.5"/>
+      <line x1="${-R - 6}" y1="${-p.groove_z}" x2="${-R + 1}" y2="${-p.groove_z}" stroke-dasharray="1 0.6"/>
+    </g>
+    <text class="dim" x="${dx + 1.5}" y="${-p.H / 2}">${p.H}</text>
+    <text class="dim" x="0" y="${-p.H - 6.2}" text-anchor="middle">Ø${p.D}</text>
+    <text class="dim" x="0" y="9" text-anchor="middle">Ø${p.bottom_d}</text>
+    <text class="dim" x="${-R - 6}" y="${-p.groove_z - 1}">friso ${p.groove_z}</text>`;
+  const warn = problems(p);
+  const w = warn.length ? `<text class="dim" x="${x0 + 2}" y="${y0 + 4}" style="font-size:3px">⚠ ${warn.join(' · ')}</text>` : '';
+  svg.innerHTML = g + img + body + bore + lens + axis + dims + w;
+}
+
+/* ---------- saída ---------- */
+const pad = (k) => k.padEnd(14);
+function scadBlock(p) { return Object.keys(DEFAULTS).map(k => `${pad(k)} = ${p[k]};`).join('\n'); }
+function update() {
+  build3D(P); drawProfile(P);
+  document.getElementById('out').textContent = scadBlock(P);
+  document.getElementById('link').value = shareLink();
+  try { localStorage.setItem('manopla-params', JSON.stringify(P)); } catch (e) {}
+}
+document.getElementById('copy').addEventListener('click', () => {
+  const t = document.getElementById('toast'), txt = scadBlock(P);
+  navigator.clipboard.writeText(txt).then(() => { t.textContent = 'Medidas copiadas.'; }, () => {
+    const r = document.createRange(); r.selectNodeContents(document.getElementById('out'));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    t.textContent = 'Não deu para copiar direto. O texto ficou selecionado: use Ctrl/Cmd+C.';
+  });
+});
+document.getElementById('copylink').addEventListener('click', () => {
+  const t = document.getElementById('toast'), box = document.getElementById('link');
+  navigator.clipboard.writeText(box.value).then(() => { t.textContent = 'Link copiado.'; }, () => { box.focus(); box.select(); t.textContent = 'Não deu para copiar direto. O link ficou selecionado: use Ctrl/Cmd+C.'; });
+});
+window.addEventListener('hashchange', () => { if (readHash()) { syncFields(P); update(); } });
+document.getElementById('reset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncFields(P); update(); });
+// foto reduzida para caber no armazenamento do navegador (~5 MB)
+const PHOTO_KEY = 'manopla-photo', OV_KEY = 'manopla-overlay';
+function saveOverlay() { try { localStorage.setItem(OV_KEY, JSON.stringify(O)); } catch (e) {} }
+function setPhoto(url, w, h) { photoURL = url; photoSize = [w, h]; drawProfile(P); }
+document.getElementById('photo').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 2000 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const url = c.toDataURL('image/jpeg', 0.85);
+      O.ov_scale = Math.min(1, (P.H * 2.2) / c.height); syncFields(O); saveOverlay();
+      setPhoto(url, c.width, c.height);
+      const t = document.getElementById('toast');
+      try { localStorage.setItem(PHOTO_KEY, JSON.stringify({ url, w: c.width, h: c.height })); t.textContent = 'Foto salva neste navegador.'; }
+      catch (err) { t.textContent = 'A foto não coube no armazenamento do navegador. Ela some ao recarregar.'; }
+    };
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+  e.target.value = '';
+});
+document.getElementById('clearphoto').addEventListener('click', () => {
+  photoURL = null; drawProfile(P);
+  try { localStorage.removeItem(PHOTO_KEY); } catch (e) {}
+});
+try { Object.assign(O, JSON.parse(localStorage.getItem(OV_KEY) || '{}')); } catch (e) {}
+try { const ph = JSON.parse(localStorage.getItem(PHOTO_KEY) || 'null'); if (ph && ph.url) { photoURL = ph.url; photoSize = [ph.w, ph.h]; } } catch (e) {}
+
+/* ---------- versões (ficam neste navegador) ---------- */
+const V_KEY = 'manopla-versions';
+let versions = [], current = null;
+try { versions = JSON.parse(localStorage.getItem(V_KEY) || '[]'); } catch (e) {}
+function saveVersions() { try { localStorage.setItem(V_KEY, JSON.stringify(versions)); return true; } catch (e) { return false; } }
+const fmt = (t) => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+function renderVersions() {
+  const ul = document.getElementById('vlist'); ul.innerHTML = '';
+  document.getElementById('vempty').hidden = versions.length > 0;
+  versions.slice().reverse().forEach(v => {
+    const li = document.createElement('li'); if (v.id === current) li.className = 'cur';
+    li.innerHTML = `<span><b></b><small>${fmt(v.at)}</small></span><button>Carregar</button><button class="danger">Apagar</button>`;
+    li.querySelector('b').textContent = v.name;
+    const [load, del] = li.querySelectorAll('button');
+    load.addEventListener('click', () => {
+      Object.assign(P, DEFAULTS, v.params); Object.assign(O, v.overlay || {});
+      current = v.id; syncFields(P); syncFields(O); update(); saveOverlay(); renderVersions();
+      document.getElementById('toast').textContent = `Versão "${v.name}" carregada.`;
+    });
+    del.addEventListener('click', () => {
+      if (!del.dataset.armed) { del.dataset.armed = '1'; del.textContent = 'Confirmar'; setTimeout(() => { delete del.dataset.armed; del.textContent = 'Apagar'; }, 3000); return; }
+      versions = versions.filter(x => x.id !== v.id); if (current === v.id) current = null;
+      saveVersions(); renderVersions();
+    });
+    ul.appendChild(li);
+  });
+}
+document.getElementById('vsave').addEventListener('click', () => {
+  const inp = document.getElementById('vname');
+  const name = inp.value.trim() || `v${versions.length + 1}`;
+  const v = { id: Date.now().toString(36), name, at: Date.now(), params: { ...P }, overlay: { ...O } };
+  versions.push(v); current = v.id;
+  const ok = saveVersions(); inp.value = ''; renderVersions();
+  document.getElementById('toast').textContent = ok ? `Versão "${name}" salva.` : 'Não deu para salvar: o armazenamento do navegador está cheio.';
+});
+document.getElementById('vname').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('vsave').click(); });
+renderVersions();
+
+buildFields(document.getElementById('fields'), SPEC, P, update);
+buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); });
+applyTheme(); resize(); update();
+if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
+</script>
