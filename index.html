@@ -125,9 +125,9 @@ pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); bo
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 6, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 6, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0 };
 const SPEC = [
-  ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05]]],
+  ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1]]],
   ['Ombro', [['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
   ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 2, 15, 0.5], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1]]],
   ['Friso', [['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
@@ -147,8 +147,8 @@ function encodeHash(p) { return 'm1_' + KEYS.map(k => +(+p[k]).toFixed(3)).join(
 function readHash() {
   const m = /^#?m1_([-0-9._]+)$/.exec(location.hash); if (!m) return false;
   const v = m[1].split('_').map(Number);
-  if (v.length !== KEYS.length || v.some(x => !isFinite(x))) return false;
-  KEYS.forEach((k, i) => { P[k] = v[i]; });
+  if (v.length > KEYS.length || v.some(x => !isFinite(x))) return false;
+  KEYS.forEach((k, i) => { P[k] = i < v.length ? v[i] : DEFAULTS[k]; });
   return true;
 }
 const fromLink = readHash();
@@ -206,7 +206,7 @@ function profile(p) {
   if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
   else raw.push([Rb, 0, p.r_base]);
   const N = 24;
-  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve), p.lip_h + (g0 - p.lip_h) * t, i === N ? p.r_groove : 0]); }
+  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * t), p.lip_h + (g0 - p.lip_h) * t, i === N ? p.r_groove : 0]); }
   raw.push([Rgi, g0, p.r_groove], [Rgi, g1, p.r_groove]);
   // ombro: Bézier que sai em pé do friso e chega na borda da lente no ângulo escolhido
   const L = Math.hypot(R - Rl, Hb - g1), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
