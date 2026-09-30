@@ -47,8 +47,7 @@ button:focus-visible, input:focus-visible, .file:focus-within { outline: 2px sol
 #three { flex: 1; min-height: 360px; position: relative; }
 #three canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 #profile { flex: 1; min-height: 360px; width: 100%; }
-.overlay { padding: 10px 14px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
-.overlay .row { grid-template-columns: 1fr 64px; }
+.photoset { gap: 8px; }
 .file input { display: none; }
 .hint { color: var(--muted); font-size: 12px; margin: 0; }
 pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; margin: 0; white-space: pre; overflow-x: auto; }
@@ -102,6 +101,12 @@ button:disabled { opacity: .45; cursor: default; }
       <ol id="vlist" class="vlist"></ol>
       <p class="hint" id="vempty">Nenhuma versão salva. Salve o estado atual das medidas para voltar a ele depois.</p>
     </fieldset>
+    <fieldset class="photoset">
+      <legend>Foto de referência</legend>
+      <div class="btns">
+        <label class="file">Sobrepor foto de perfil<input type="file" id="photo" accept="image/*"></label>
+        <button id="clearphoto">Tirar foto</button>
+      </fieldset>
     <div id="fields"></div>
     <fieldset>
       <legend>Compartilhar e exportar</legend>
@@ -133,11 +138,6 @@ button:disabled { opacity: .45; cursor: default; }
   <section class="panel view vp">
     <h2>Perfil em corte <small id="scaleinfo">grade 1 mm / 10 mm</small></h2>
     <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
-    <div class="overlay">
-      <div class="btns">
-        <label class="file">Sobrepor foto de perfil<input type="file" id="photo" accept="image/*"></label>
-        <button id="clearphoto">Tirar foto</button>
-      </div>
       <div id="ovfields"></div>
       <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
       <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
@@ -159,8 +159,8 @@ const SPEC = [
   ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
-const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05]];
-const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2 };
+const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo (ajuste pela foto)', 0.3, 3, 0.05]];
+const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
 function migrateO(o, H) { if (o.ov_v !== 2) { o.ov_y = (o.ov_y || 0) + H / 2; o.ov_v = 2; } return o; }
 
@@ -569,39 +569,58 @@ function modelToPhoto(x, z) {
   const s = O.ov_scale, a = O.ov_rot * Math.PI / 180, ux = x - O.ov_x, uy = -z + O.ov_y;
   return [photoSize[0] / 2 + (ux * Math.cos(a) + uy * Math.sin(a)) / s, photoSize[1] / 2 + (-ux * Math.sin(a) + uy * Math.cos(a)) / s];
 }
-function otsu(lum) {
-  const hist = new Array(256).fill(0); lum.forEach(v => hist[v]++);
-  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
-  let wB = 0, sB = 0, best = 0, thr = 128;
-  for (let t = 0; t < 256; t++) { wB += hist[t]; if (!wB) continue; const wF = lum.length - wB; if (!wF) break; sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) ** 2; if (v > best) { best = v; thr = t; } }
-  return thr;
-}
+// separa a peça do fundo "enchendo" o fundo a partir das bordas da foto: brilhos e reflexos
+// dentro da peça não atrapalham, porque o preenchimento nunca começa lá dentro
 async function measurePhoto() {
   const im = new Image(); im.src = photoURL; await im.decode();
-  const k = Math.min(1, 700 / Math.max(photoSize[0], photoSize[1])), w = Math.round(photoSize[0] * k), h = Math.round(photoSize[1] * k);
+  const k = Math.min(1, 700 / Math.max(photoSize[0], photoSize[1])), w = Math.round(photoSize[0] * k), h = Math.round(photoSize[1] * k), n = w * h;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1.5px)'; g.drawImage(im, 0, 0, w, h);
-  const d = g.getImageData(0, 0, w, h).data, lum = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) lum[i] = (d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114) | 0;
-  const thr = otsu(lum);
-  // semente no eixo, a 40% da altura atual: o lado (claro/escuro) da semente é a peça
-  let [sx, sy] = modelToPhoto(0, P.H * 0.4).map(v => Math.round(v * k));
-  if (sx < 0 || sy < 0 || sx >= w || sy >= h) throw new Error('A foto não cobre o meio da peça. Alinhe a foto sobre o perfil antes.');
-  const dark = lum[sy * w + sx] < thr, inObj = i => (lum[i] < thr) === dark;
-  const seen = new Uint8Array(w * h), stack = [sy * w + sx]; seen[stack[0]] = 1;
-  const bins = new Map(), step = 0.5;
-  let count = 0;
+  const d = g.getImageData(0, 0, w, h).data;
+  const dist = (i, j) => Math.hypot(d[i * 4] - d[j * 4], d[i * 4 + 1] - d[j * 4 + 1], d[i * 4 + 2] - d[j * 4 + 2]);
+  const border = [];
+  for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x);
+  for (let y = 1; y < h - 1; y++) border.push(y * w, y * w + w - 1);
+  // cor de referência do fundo = mediana das bordas; tolerância pela variação das bordas
+  const med = ch => { const v = border.map(i => d[i * 4 + ch]).sort((a, b) => a - b); return v[v.length >> 1]; };
+  const ref = [med(0), med(1), med(2)];
+  const dref = i => Math.hypot(d[i * 4] - ref[0], d[i * 4 + 1] - ref[1], d[i * 4 + 2] - ref[2]);
+  const bd = border.map(dref).sort((a, b) => a - b), tol = Math.max(10, bd[Math.floor(bd.length * 0.8)] * 1.5) * O.ov_sens;
+  const bg = new Uint8Array(n), stack = [];
+  for (const i of border) if (!bg[i] && dref(i) < tol) { bg[i] = 1; stack.push(i); }
   while (stack.length) {
-    const i = stack.pop(), x = i % w, y = (i / w) | 0; count++;
-    const [mx, mz] = photoToModel(x / k, y / k), b = Math.round(mz / step);
-    const e = bins.get(b); if (e) { if (mx < e[0]) e[0] = mx; if (mx > e[1]) e[1] = mx; } else bins.set(b, [mx, mx]);
-    for (const j of [i - 1, i + 1, i - w, i + w]) if (j >= 0 && j < w * h && !seen[j] && Math.abs((j % w) - x) <= 1 && inObj(j)) { seen[j] = 1; stack.push(j); }
+    const i = stack.pop(), x = i % w;
+    for (const j of [i - 1, i + 1, i - w, i + w]) {
+      if (j < 0 || j >= n || bg[j] || Math.abs((j % w) - x) > 1) continue;
+      const dr = dref(j);
+      if (dr < tol || (dist(i, j) < tol * 0.35 && dr < tol * 2.5)) { bg[j] = 1; stack.push(j); }
+    }
   }
-  if (count > w * h * 0.6) throw new Error('Não consegui separar a peça do fundo. Use uma foto com fundo que contraste com a peça.');
+  // peça = maior mancha que não é fundo, preferindo a que contém o eixo
+  let [sx, sy] = modelToPhoto(0, P.H * 0.4).map(v => Math.round(v * k));
+  const lab = new Int32Array(n).fill(-1), sizes = [];
+  for (let s0 = 0; s0 < n; s0++) {
+    if (bg[s0] || lab[s0] >= 0) continue;
+    const id = sizes.length; let cnt = 0; const st = [s0]; lab[s0] = id;
+    while (st.length) { const i = st.pop(), x = i % w; cnt++; for (const j of [i - 1, i + 1, i - w, i + w]) if (j >= 0 && j < n && !bg[j] && lab[j] < 0 && Math.abs((j % w) - x) <= 1) { lab[j] = id; st.push(j); } }
+    sizes.push(cnt);
+  }
+  if (!sizes.length) throw new Error('Não achei a peça: a foto inteira parece fundo. Diminua a "Sensibilidade do fundo".');
+  const inside = sx >= 0 && sy >= 0 && sx < w && sy < h ? lab[sy * w + sx] : -1;
+  const big = sizes.indexOf(Math.max(...sizes)), pick = inside >= 0 && sizes[inside] > sizes[big] * 0.3 ? inside : big;
+  if (sizes[pick] > n * 0.8) throw new Error('Não consegui separar a peça do fundo. Aumente a "Sensibilidade do fundo" ou use uma foto com fundo que contraste.');
+  const bins = new Map(), step = 0.5;
+  for (let i = 0; i < n; i++) {
+    if (lab[i] !== pick) continue;
+    const [mx, mz] = photoToModel((i % w) / k, ((i / w) | 0) / k), b = Math.round(mz / step);
+    const e = bins.get(b); if (e) { if (mx < e[0]) e[0] = mx; if (mx > e[1]) e[1] = mx; } else bins.set(b, [mx, mx]);
+  }
   const keys = [...bins.keys()].sort((a, b) => a - b), z0 = keys[0] * step, z1 = keys[keys.length - 1] * step;
   const centers = keys.map(b => (bins.get(b)[0] + bins.get(b)[1]) / 2).sort((a, b) => a - b), axis = centers[centers.length >> 1];
   const pts = keys.filter(b => b * step > z0 + 0.6 && b * step < z1 - 0.6).map(b => ({ z: b * step - z0, r: (bins.get(b)[1] - bins.get(b)[0]) / 2 }));
-  return { pts, height: z1 - z0, axis, z0 };
+  let touches = false; for (let x = 0; x < w && !touches; x++) touches = lab[x] === pick || lab[(h - 1) * w + x] === pick;
+  for (let y = 0; y < h && !touches; y++) touches = lab[y * w] === pick || lab[y * w + w - 1] === pick;
+  return { pts, height: z1 - z0, axis, z0, touches };
 }
 // raio externo do modelo em cada altura (maior raio entre os segmentos que cruzam z)
 function modelRadii(p, zs) { const pr = profile(p).pts; return zs.map(z => radiusAt(pr, z)); }
@@ -651,7 +670,8 @@ function runFit(m, extra = []) {
 }
 function showFit(res, m) {
   const box = document.getElementById('fitbox'), keys = ['H', ...res.keys, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
-  const off = document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>';
+  const warnEdge = m.touches ? '<p>A peça encosta na borda da foto: a parte cortada não entra na medida.</p>' : '';
+  const off = warnEdge + (document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>');
   box.innerHTML = `<p>Diferença média entre o contorno da foto (tracejado verde) e o modelo: <b>${res.before.toFixed(2)} mm</b> → <b class="up">${res.after.toFixed(2)} mm</b></p>${off}
     <table><tbody>${keys.map(k => `<tr><td>${LABEL[k] || k}</td><td>${P[k]}</td><td class="up">${res.q[k]}</td></tr>`).join('') || '<tr><td>Nenhuma medida mudou.</td></tr>'}</tbody></table>
     <div class="btns"><button class="primary" id="fitapply">Aplicar</button><button id="fitdrop">Descartar</button></div>
