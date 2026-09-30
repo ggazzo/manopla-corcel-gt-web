@@ -149,9 +149,9 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4, shoulder_z: 40, shoulder_link: 1 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5 };
 const SPEC = [
-  ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1]]],
+  ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
   ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 1, 15, 0.25], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1], ['disc_d', 'Diâmetro do emblema (disco)', 10, 65, 0.1]]],
   ['Friso', [['shoulder_link', 'Friso na altura do ombro', 'bool'], ['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
@@ -250,7 +250,7 @@ function profile(p) {
   if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
   else raw.push([Rb, 0, p.r_base]);
   const N = 24;
-  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * t), p.lip_h + (sz - p.lip_h) * t, i === N ? p.r_groove : 0]); }
+  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * Math.pow(t, Math.log(0.5) / Math.log(p.skirt_bulge_pos))), p.lip_h + (sz - p.lip_h) * t, i === N ? p.r_groove : 0]); }
   // ombro: Bézier que sai em pé do ressalto e chega na borda da lente no ângulo escolhido
   const L = Math.hypot(R - Rl, Hb - sz), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
   const P0 = [R, sz], P1 = [R, sz + f * (Hb - sz)], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
@@ -550,7 +550,7 @@ try { const ph = JSON.parse(localStorage.getItem(PHOTO_KEY) || 'null'); if (ph &
 
 /* ---------- ajuste pela foto: silhueta + otimizador (sem IA) ---------- */
 let fitMeasure = null, fitSuggestion = null;
-const FIT_KEYS = ['D', 'bottom_d', 'lens_d', 'groove_z', 'skirt_curve', 'skirt_bulge', 'shoulder_angle', 'shoulder_full'];
+const FIT_KEYS = ['D', 'bottom_d', 'lens_d', 'groove_z', 'skirt_curve', 'skirt_bulge', 'skirt_bulge_pos', 'shoulder_angle', 'shoulder_full', 'ressalto'];
 const LABEL = Object.fromEntries(SPEC.flatMap(([, items]) => items.map(([k, l]) => [k, l])));
 const RANGE = Object.fromEntries(SPEC.flatMap(([, items]) => items.map(([k, , mn, mx]) => [k, [mn, mx]])));
 
