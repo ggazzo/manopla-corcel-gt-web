@@ -106,7 +106,13 @@ button:disabled { opacity: .45; cursor: default; }
       <div class="btns">
         <label class="file">Sobrepor foto de perfil<input type="file" id="photo" accept="image/*"></label>
         <button id="clearphoto">Tirar foto</button>
-      </fieldset>
+      </div>
+      <div id="ovfields"></div>
+      <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
+      <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
+      <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto para a altura atual do corpo (use quando a altura foi medida com paquímetro)</label></div>
+      <div id="fitbox" class="fitbox" hidden></div>
+    </fieldset>
     <div id="fields"></div>
     <fieldset>
       <legend>Compartilhar e exportar</legend>
@@ -114,7 +120,7 @@ button:disabled { opacity: .45; cursor: default; }
       <div class="btns">
         <button class="primary" id="copylink">Copiar link</button>
       </div>
-      <p class="hint">O link leva as medidas junto. Quem abrir vê a peça exatamente assim./p>
+      <p class="hint">O link leva as medidas junto. Quem abrir vê a peça exatamente assim.</p>
       <div class="btns">
         <button class="primary" id="stlbody">Baixar corpo.stl</button>
         <button class="primary" id="stllens">Baixar lente.stl</button>
@@ -138,12 +144,6 @@ button:disabled { opacity: .45; cursor: default; }
   <section class="panel view vp">
     <h2>Perfil em corte <small id="scaleinfo">grade 1 mm / 10 mm</small></h2>
     <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
-      <div id="ovfields"></div>
-      <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
-      <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
-      <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto para a altura atual do corpo (use quando a altura foi medida com paquímetro)</label></div>
-      <div id="fitbox" class="fitbox" hidden></div>
-    </div>
   </section>
 </div>
 
