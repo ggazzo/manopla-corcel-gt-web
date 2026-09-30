@@ -403,7 +403,7 @@ function exportSTL(which) {
   const prof = which === 'corpo' ? bodySolidProfile(P) : lensProfile(P);
   const { a, vol } = latheTriangles(prof, 180);
   download(stlBlob(a), `manopla-${which}.stl`);
-  t.textContent = `${which === 'corpo' ? 'Corpo' : 'Lente'} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos, ${(vol / 1000).toFixed(1)} cm³.`;
+  t.textContent = `${which === 'corpo' ? 'Corpo baixado' : 'Lente baixada'}: ${(a.length / 9).toLocaleString('pt-BR')} triângulos, ${(vol / 1000).toFixed(1)} cm³.`;
 }
 document.getElementById('stlbody').addEventListener('click', () => exportSTL('corpo'));
 document.getElementById('stllens').addEventListener('click', () => exportSTL('lente'));
