@@ -137,11 +137,11 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1]]],
   ['Ombro', [['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
-  ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 1, 15, 0.25], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1]]],
+  ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 1, 15, 0.25], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1], ['disc_d', 'Diâmetro do emblema (disco)', 10, 65, 0.1]]],
   ['Friso', [['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
   ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
@@ -257,6 +257,7 @@ function problems(p) {
   if (p.groove_z + p.groove_w / 2 >= p.H - p.lens_h - 1) out.push('friso acima do topo do corpo');
   if (p.groove_z - p.groove_w / 2 <= p.lip_h + 1) out.push('friso abaixo da aba');
   if (p.lens_d > p.D) out.push('lente maior que o ombro');
+  if (p.disc_d > p.lens_d) out.push('emblema maior que a lente');
   if (p.bore_d >= p.bottom_d) out.push('furo maior que a base');
   if (p.bore_h >= p.H - p.lens_h) out.push('furo atravessa o topo');
   return out;
@@ -301,9 +302,10 @@ function build3D(p) {
   scene.remove(part); part = new THREE.Group();
   const { pts, Hb, Rl } = profile(p);
   part.add(new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 160), matBody));
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(Rl - 1.3, 96), matDisc);
+  const dr = Math.min(p.disc_d, p.lens_d) / 2;
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(dr, 96), matDisc);
   disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI; disc.position.y = Hb + 0.05; part.add(disc);
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(Rl - 1.1, Rl - 1.1, Math.min(2.5, p.lens_h * 0.6), 128, 1, true), matRing);
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(dr + 0.2, dr + 0.2, Math.min(2.5, p.lens_h * 0.6), 128, 1, true), matRing);
   ring.position.y = Hb + Math.min(2.5, p.lens_h * 0.6) / 2; part.add(ring);
   const lp = lensProfile(p).map(([r, z]) => new THREE.Vector2(r, z + Hb));
   part.add(new THREE.Mesh(new THREE.LatheGeometry(lp, 160), matLens));
@@ -345,6 +347,8 @@ function drawProfile(p) {
   const lp = lensProfile(p), lr = lp.map(([r, z]) => `${r.toFixed(2)},${(-(z + Hb)).toFixed(2)}`), ll = lp.slice().reverse().map(([r, z]) => `${(-r).toFixed(2)},${(-(z + Hb)).toFixed(2)}`);
   const lens = `<polygon points="${lr.concat(ll).join(' ')}" fill="var(--chrome)" fill-opacity="0.35" stroke="var(--chrome)" stroke-width="0.3"/>`;
   const bore = `<rect x="${-p.bore_d / 2}" y="${-p.bore_h}" width="${p.bore_d}" height="${p.bore_h}" fill="var(--panel)" fill-opacity="${photoURL ? 0 : 0.95}" stroke="var(--accent)" stroke-width="0.25" stroke-dasharray="1 0.6"/>`;
+  const dd = Math.min(p.disc_d, p.lens_d) / 2;
+  const discLine = `<line x1="${-dd}" y1="${-Hb - 0.15}" x2="${dd}" y2="${-Hb - 0.15}" stroke="var(--accent)" stroke-width="0.5"/>`;
   const axis = `<line x1="0" y1="${y0}" x2="0" y2="${y0 + h}" stroke="var(--accent)" stroke-width="0.15" stroke-dasharray="3 1 0.5 1"/>`;
   const dx = R + 6;
   const dims = `
@@ -360,12 +364,12 @@ function drawProfile(p) {
     <text class="dim" x="${-R - 6}" y="${-p.groove_z - 1}">friso ${p.groove_z}</text>`;
   const warn = problems(p);
   const w = warn.length ? `<text class="dim" x="${x0 + 2}" y="${y0 + 4}" style="font-size:3px">⚠ ${warn.join(' · ')}</text>` : '';
-  svg.innerHTML = g + img + body + bore + lens + axis + dims + w;
+  svg.innerHTML = g + img + body + bore + lens + discLine + axis + dims + w;
 }
 
 /* ---------- STL (só baixa fora do visualizador do Claude, que bloqueia downloads) ---------- */
 function bodySolidProfile(p) {
-  const { pts, Hb } = profile(p), rb = p.bore_d / 2, rr = (p.lens_d - 2) / 2;
+  const { pts, Hb } = profile(p), rb = p.bore_d / 2, rr = Math.min(p.disc_d + 0.6, p.lens_d) / 2;
   const bh = Math.min(p.bore_h, Hb - 2);
   return [[0, bh], [rb, bh], [rb, 0]].concat(pts.slice(1, -1).filter(([r, z]) => !(z <= 1e-9 && r < rb)), [[rr, Hb], [rr, Hb - 1], [0, Hb - 1]]);
 }
