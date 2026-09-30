@@ -585,7 +585,7 @@ async function measurePhoto() {
   const med = ch => { const v = border.map(i => d[i * 4 + ch]).sort((a, b) => a - b); return v[v.length >> 1]; };
   const ref = [med(0), med(1), med(2)];
   const dref = i => Math.hypot(d[i * 4] - ref[0], d[i * 4 + 1] - ref[1], d[i * 4 + 2] - ref[2]);
-  const bd = border.map(dref).sort((a, b) => a - b), tol = Math.max(10, bd[Math.floor(bd.length * 0.8)] * 1.5) * O.ov_sens;
+  const bd = border.map(dref).sort((a, b) => a - b), tol = Math.max(10, bd[Math.floor(bd.length * 0.8)] * 0.9) * O.ov_sens;
   const bg = new Uint8Array(n), stack = [];
   for (const i of border) if (!bg[i] && dref(i) < tol) { bg[i] = 1; stack.push(i); }
   while (stack.length) {
