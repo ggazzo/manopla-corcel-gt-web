@@ -100,6 +100,11 @@ button:disabled { opacity: .45; cursor: default; }
         <button class="primary" id="copylink">Copiar link</button>
       </div>
       <p class="hint">O link leva as medidas junto. Quem abrir vê a peça exatamente assim./p>
+      <div class="btns">
+        <button class="primary" id="stlbody">Baixar corpo.stl</button>
+        <button class="primary" id="stllens">Baixar lente.stl</button>
+      </div>
+      <p class="hint" id="stlhint">STL em mm, com o furo da base e o rebaixo do disco, pronto para o fatiador.</p>
       <pre id="out"></pre>
       <div class="btns">
         <button id="copy">Copiar medidas</button>
@@ -357,6 +362,51 @@ function drawProfile(p) {
   const w = warn.length ? `<text class="dim" x="${x0 + 2}" y="${y0 + 4}" style="font-size:3px">⚠ ${warn.join(' · ')}</text>` : '';
   svg.innerHTML = g + img + body + bore + lens + axis + dims + w;
 }
+
+/* ---------- STL (só baixa fora do visualizador do Claude, que bloqueia downloads) ---------- */
+function bodySolidProfile(p) {
+  const { pts, Hb } = profile(p), rb = p.bore_d / 2, rr = (p.lens_d - 2) / 2;
+  const bh = Math.min(p.bore_h, Hb - 2);
+  return [[0, bh], [rb, bh], [rb, 0]].concat(pts.slice(1, -1).filter(([r, z]) => !(z <= 1e-9 && r < rb)), [[rr, Hb], [rr, Hb - 1], [0, Hb - 1]]);
+}
+function latheTriangles(prof, seg) {
+  let g = new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), seg).toNonIndexed();
+  let a = g.attributes.position.array, vol = 0;
+  for (let i = 0; i < a.length; i += 9) {
+    vol += (a[i] * (a[i + 4] * a[i + 8] - a[i + 5] * a[i + 7]) - a[i + 1] * (a[i + 3] * a[i + 8] - a[i + 5] * a[i + 6]) + a[i + 2] * (a[i + 3] * a[i + 7] - a[i + 4] * a[i + 6])) / 6;
+  }
+  if (vol < 0) { g.dispose(); g = new THREE.LatheGeometry(prof.slice().reverse().map(([r, z]) => new THREE.Vector2(r, z)), seg).toNonIndexed(); a = g.attributes.position.array; vol = -vol; }
+  return { a, vol };
+}
+function stlBlob(a) {
+  const n = a.length / 9, buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf);
+  dv.setUint32(80, n, true);
+  let o = 84;
+  for (let i = 0; i < a.length; i += 9) {
+    // Y do three.js vira Z da impressora
+    const v = [0, 3, 6].map(k => [a[i + k], -a[i + k + 2], a[i + k + 1]]);
+    const u = v[1].map((x, j) => x - v[0][j]), w = v[2].map((x, j) => x - v[0][j]);
+    const nx = u[1] * w[2] - u[2] * w[1], ny = u[2] * w[0] - u[0] * w[2], nz = u[0] * w[1] - u[1] * w[0], l = Math.hypot(nx, ny, nz) || 1;
+    [nx / l, ny / l, nz / l, ...v[0], ...v[1], ...v[2]].forEach(x => { dv.setFloat32(o, x, true); o += 4; });
+    o += 2;
+  }
+  return new Blob([buf], { type: 'model/stl' });
+}
+function download(blob, name) {
+  const url = URL.createObjectURL(blob), el = document.createElement('a');
+  el.href = url; el.download = name; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function exportSTL(which) {
+  const t = document.getElementById('toast');
+  if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a> (abre com estas medidas).'; return; }
+  const prof = which === 'corpo' ? bodySolidProfile(P) : lensProfile(P);
+  const { a, vol } = latheTriangles(prof, 180);
+  download(stlBlob(a), `manopla-${which}.stl`);
+  t.textContent = `${which === 'corpo' ? 'Corpo' : 'Lente'} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos, ${(vol / 1000).toFixed(1)} cm³.`;
+}
+document.getElementById('stlbody').addEventListener('click', () => exportSTL('corpo'));
+document.getElementById('stllens').addEventListener('click', () => exportSTL('lente'));
 
 /* ---------- saída ---------- */
 const pad = (k) => k.padEnd(14);
