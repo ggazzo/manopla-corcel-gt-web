@@ -193,7 +193,8 @@ function buildFields(host, spec, obj, onChange) {
         row.className = 'row check';
         row.innerHTML = `<label for="c_${key}"><input type="checkbox" id="c_${key}"> ${label}</label>`;
         const c = row.querySelector('input'); c.checked = !!obj[key];
-        c.addEventListener('change', () => { beforeEdit(obj); obj[key] = c.checked ? 1 : 0; onChange(); });
+        // marcar/desmarcar é sempre um passo próprio no desfazer
+        c.addEventListener('change', () => { if (obj === P) checkpoint(); else beforeEdit(obj); obj[key] = c.checked ? 1 : 0; onChange(); });
         fs.appendChild(row); continue;
       }
       row.innerHTML = `<label for="n_${key}">${label}</label><input type="number" id="n_${key}" min="${min}" max="${max}" step="${step}"><input type="range" id="r_${key}" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
