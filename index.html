@@ -141,6 +141,7 @@ button:disabled { opacity: .45; cursor: default; }
       <div id="ovfields"></div>
       <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
       <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
+      <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto para a altura atual do corpo (use quando a altura foi medida com paquímetro)</label></div>
       <div id="fitbox" class="fitbox" hidden></div>
     </div>
   </section>
@@ -650,7 +651,7 @@ function runFit(m, extra = []) {
 }
 function showFit(res, m) {
   const box = document.getElementById('fitbox'), keys = ['H', ...res.keys, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
-  const off = Math.abs(m.axis) > 0.8 ? `<p>A foto está ${m.axis.toFixed(1)} mm fora do eixo. Isso não afeta o ajuste, mas dá para acertar em "Mover X".</p>` : '';
+  const off = document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>';
   box.innerHTML = `<p>Diferença média entre o contorno da foto (tracejado verde) e o modelo: <b>${res.before.toFixed(2)} mm</b> → <b class="up">${res.after.toFixed(2)} mm</b></p>${off}
     <table><tbody>${keys.map(k => `<tr><td>${LABEL[k] || k}</td><td>${P[k]}</td><td class="up">${res.q[k]}</td></tr>`).join('') || '<tr><td>Nenhuma medida mudou.</td></tr>'}</tbody></table>
     <div class="btns"><button class="primary" id="fitapply">Aplicar</button><button id="fitdrop">Descartar</button></div>
@@ -663,7 +664,16 @@ document.getElementById('fit').addEventListener('click', async () => {
   const t = document.getElementById('toast'), btn = document.getElementById('fit');
   btn.disabled = true; btn.textContent = 'Analisando…';
   try {
-    const m = await measurePhoto();
+    let m = await measurePhoto();
+    // centraliza: eixo da peça em x = 0 e base em z = 0
+    O.ov_x -= m.axis; O.ov_y -= m.z0;
+    // escala opcional em torno da base (0, 0), mantendo a altura do corpo que está na tela
+    if (document.getElementById('fitscale').checked && m.height > 0) {
+      const k = (P.H - P.lens_h) / m.height;
+      O.ov_scale *= k; O.ov_x *= k; O.ov_y *= k;
+    }
+    syncFields(O); saveOverlay();
+    m = await measurePhoto();
     fitMeasure = m; drawProfile(P);
     await new Promise(r => setTimeout(r, 30));
     const res = runFit(m, P.shoulder_link ? [] : ['shoulder_z']); fitSuggestion = res; showFit(res, m);
