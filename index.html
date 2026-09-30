@@ -244,19 +244,24 @@ function fillet(pts) {
 }
 function profile(p) {
   const R = p.D / 2, Rl = p.lens_d / 2, Rb = p.bottom_d / 2, Hb = p.H - p.lens_h;
-  const Rs = R - p.ressalto, sz = p.shoulder_link ? p.groove_z : p.shoulder_z;
+  const link = !!p.shoulder_link, sz = link ? p.groove_z : p.shoulder_z;
+  // sem o friso para esconder a emenda, o ombro continua a saia sem degrau nem quina
+  const Rs = link ? R - p.ressalto : R, ex = Math.log(0.5) / Math.log(p.skirt_bulge_pos);
   const g0 = p.groove_z - p.groove_w / 2, g1 = p.groove_z + p.groove_w / 2;
   const raw = [[0, 0]];
   if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
   else raw.push([Rb, 0, p.r_base]);
   const N = 24;
-  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * Math.pow(t, Math.log(0.5) / Math.log(p.skirt_bulge_pos))), p.lip_h + (sz - p.lip_h) * t, i === N ? p.r_groove : 0]); }
+  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * Math.pow(t, ex)), p.lip_h + (sz - p.lip_h) * t, i === N && link ? p.r_groove : 0]); }
   // ombro: Bézier que sai em pé do ressalto e chega na borda da lente no ângulo escolhido
   const L = Math.hypot(R - Rl, Hb - sz), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
-  const P0 = [R, sz], P1 = [R, sz + f * (Hb - sz)], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
-  for (let i = 0; i <= 24; i++) {
+  // direção da saia no fim (derivada em t = 1): no modo solto o ombro sai nessa direção
+  const dr = (Rs - Rb) * p.skirt_curve - p.skirt_bulge * Math.PI * ex, dz = sz - p.lip_h, dl = Math.hypot(dr, dz) || 1;
+  const reach = f * (Hb - sz) / Math.max(dz / dl, 0.2);
+  const P0 = [R, sz], P1 = link ? [R, sz + f * (Hb - sz)] : [R + dr / dl * reach, sz + dz / dl * reach], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
+  for (let i = link ? 0 : 1; i <= 24; i++) {
     const t = i / 24, u = 1 - t, b = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
-    raw.push([b[0] * P0[0] + b[1] * P1[0] + b[2] * P2[0] + b[3] * P3[0], b[0] * P0[1] + b[1] * P1[1] + b[2] * P2[1] + b[3] * P3[1], i === 0 ? p.r_groove : 0]);
+    raw.push([b[0] * P0[0] + b[1] * P1[0] + b[2] * P2[0] + b[3] * P3[0], b[0] * P0[1] + b[1] * P1[1] + b[2] * P2[1] + b[3] * P3[1], i === 0 && link ? p.r_groove : 0]);
   }
   raw.push([0, Hb]);
   return { pts: fillet(cutGroove(raw, g0, g1, p.groove_depth, p.r_groove)), Hb, R, Rl, Rb };
