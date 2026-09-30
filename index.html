@@ -301,12 +301,13 @@ function build3D(p) {
   part.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   scene.remove(part); part = new THREE.Group();
   const { pts, Hb, Rl } = profile(p);
-  part.add(new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 160), matBody));
+  // mesmo sólido do STL: com o furo da base e o rebaixo do disco
+  part.add(new THREE.Mesh(new THREE.LatheGeometry(bodySolidProfile(p).map(([r, z]) => new THREE.Vector2(r, z)), 160), matBody));
   const dr = Math.min(p.disc_d, p.lens_d) / 2;
   const disc = new THREE.Mesh(new THREE.CircleGeometry(dr, 96), matDisc);
-  disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI; disc.position.y = Hb + 0.05; part.add(disc);
+  disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI; disc.position.y = Hb - 1 + 0.05; part.add(disc);
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(dr + 0.2, dr + 0.2, Math.min(2.5, p.lens_h * 0.6), 128, 1, true), matRing);
-  ring.position.y = Hb + Math.min(2.5, p.lens_h * 0.6) / 2; part.add(ring);
+  ring.position.y = Hb - 1 + Math.min(2.5, p.lens_h * 0.6) / 2; part.add(ring);
   const lp = lensProfile(p).map(([r, z]) => new THREE.Vector2(r, z + Hb));
   part.add(new THREE.Mesh(new THREE.LatheGeometry(lp, 160), matLens));
   scene.add(part);
