@@ -54,6 +54,10 @@ button:focus-visible, input:focus-visible, .file:focus-within { outline: 2px sol
 pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; margin: 0; white-space: pre; overflow-x: auto; }
 .linkbox { width: 100%; box-sizing: border-box; font: 12px var(--f-mono); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); }
 .undo { align-items: center; }
+.row.check { grid-template-columns: 1fr; }
+.row.check label { display: flex; gap: 6px; align-items: center; }
+.row.check input { accent-color: var(--accent); margin: 0; }
+.row input:disabled { opacity: .45; }
 button:disabled { opacity: .45; cursor: default; }
 .fitbox { border: 1px solid var(--line); border-radius: 4px; padding: 8px; display: grid; gap: 8px; }
 .fitbox table { border-collapse: collapse; font: 12px var(--f-mono); font-variant-numeric: tabular-nums; width: 100%; }
@@ -145,12 +149,12 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4, shoulder_z: 40, shoulder_link: 1 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1]]],
-  ['Ombro', [['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
+  ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
   ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 1, 15, 0.25], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1], ['disc_d', 'Diâmetro do emblema (disco)', 10, 65, 0.1]]],
-  ['Friso', [['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
+  ['Friso', [['shoulder_link', 'Friso na altura do ombro', 'bool'], ['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
   ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
@@ -185,6 +189,13 @@ function buildFields(host, spec, obj, onChange) {
     if (title) fs.innerHTML = `<legend>${title}</legend>`;
     for (const [key, label, min, max, step] of items) {
       const row = document.createElement('div'); row.className = 'row';
+      if (min === 'bool') {
+        row.className = 'row check';
+        row.innerHTML = `<label for="c_${key}"><input type="checkbox" id="c_${key}"> ${label}</label>`;
+        const c = row.querySelector('input'); c.checked = !!obj[key];
+        c.addEventListener('change', () => { beforeEdit(obj); obj[key] = c.checked ? 1 : 0; onChange(); });
+        fs.appendChild(row); continue;
+      }
       row.innerHTML = `<label for="n_${key}">${label}</label><input type="number" id="n_${key}" min="${min}" max="${max}" step="${step}"><input type="range" id="r_${key}" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
       const n = row.querySelector('input[type=number]'), r = row.querySelector('input[type=range]');
       n.value = r.value = obj[key];
@@ -196,7 +207,16 @@ function buildFields(host, spec, obj, onChange) {
     host.appendChild(fs);
   }
 }
-function syncFields(obj) { for (const k in obj) { const n = document.getElementById('n_' + k), r = document.getElementById('r_' + k); if (n) n.value = r.value = obj[k]; } }
+function syncFields(obj) {
+  for (const k in obj) { const n = document.getElementById('n_' + k), r = document.getElementById('r_' + k), c = document.getElementById('c_' + k); if (n) n.value = r.value = obj[k]; if (c) c.checked = !!obj[k]; }
+  linkState();
+}
+// com o friso preso ao ombro, a altura do ombro segue a do friso e fica travada
+function linkState() {
+  if (!('shoulder_link' in P)) return;
+  if (P.shoulder_link) P.shoulder_z = P.groove_z;
+  for (const id of ['n_shoulder_z', 'r_shoulder_z']) { const el = document.getElementById(id); if (el) { el.disabled = !!P.shoulder_link; el.value = P.shoulder_z; } }
+}
 
 // mesma geometria do manopla-corcel.scad: pontos [raio, altura, raio_do_arredondamento]
 function fillet(pts) {
@@ -223,22 +243,35 @@ function fillet(pts) {
 }
 function profile(p) {
   const R = p.D / 2, Rl = p.lens_d / 2, Rb = p.bottom_d / 2, Hb = p.H - p.lens_h;
-  const Rs = R - p.ressalto, g0 = p.groove_z - p.groove_w / 2, g1 = p.groove_z + p.groove_w / 2, Rgi = Math.min(Rs, R) - p.groove_depth;
+  const Rs = R - p.ressalto, sz = p.shoulder_link ? p.groove_z : p.shoulder_z;
+  const g0 = p.groove_z - p.groove_w / 2, g1 = p.groove_z + p.groove_w / 2;
   const raw = [[0, 0]];
   if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
   else raw.push([Rb, 0, p.r_base]);
   const N = 24;
-  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * t), p.lip_h + (g0 - p.lip_h) * t, i === N ? p.r_groove : 0]); }
-  raw.push([Rgi, g0, p.r_groove], [Rgi, g1, p.r_groove]);
-  // ombro: Bézier que sai em pé do friso e chega na borda da lente no ângulo escolhido
-  const L = Math.hypot(R - Rl, Hb - g1), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
-  const P0 = [R, g1], P1 = [R, g1 + f * (Hb - g1)], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
+  for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * t), p.lip_h + (sz - p.lip_h) * t, i === N ? p.r_groove : 0]); }
+  // ombro: Bézier que sai em pé do ressalto e chega na borda da lente no ângulo escolhido
+  const L = Math.hypot(R - Rl, Hb - sz), f = p.shoulder_full, phi = p.shoulder_angle * Math.PI / 180;
+  const P0 = [R, sz], P1 = [R, sz + f * (Hb - sz)], P3 = [Rl, Hb], P2 = [Rl + Math.cos(phi) * f * L, Hb - Math.sin(phi) * f * L];
   for (let i = 0; i <= 24; i++) {
     const t = i / 24, u = 1 - t, b = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
     raw.push([b[0] * P0[0] + b[1] * P1[0] + b[2] * P2[0] + b[3] * P3[0], b[0] * P0[1] + b[1] * P1[1] + b[2] * P2[1] + b[3] * P3[1], i === 0 ? p.r_groove : 0]);
   }
   raw.push([0, Hb]);
-  return { pts: fillet(raw), Hb, R, Rl, Rb };
+  return { pts: fillet(cutGroove(raw, g0, g1, p.groove_depth, p.r_groove)), Hb, R, Rl, Rb };
+}
+// raio da superfície em z (maior raio entre os segmentos que cruzam z)
+function radiusAt(pts, z) {
+  let best = 0;
+  for (let i = 1; i < pts.length; i++) { const [r1, z1] = pts[i - 1], [r2, z2] = pts[i]; if (z1 !== z2 && (z - z1) * (z - z2) <= 0) best = Math.max(best, r1 + (r2 - r1) * (z - z1) / (z2 - z1)); }
+  return best;
+}
+// o friso é um corte de largura g0..g1 em qualquer altura: tira os pontos dentro dele e põe o degrau
+function cutGroove(raw, g0, g1, depth, rg) {
+  if (depth <= 0 || g1 <= g0) return raw;
+  const r0 = radiusAt(raw, g0), r1 = radiusAt(raw, g1), ri = Math.min(r0, r1) - depth;
+  const below = raw.filter(q => q[1] < g0 || (q[0] === 0 && q[1] === 0)), above = raw.filter(q => q[1] > g1);
+  return below.concat([[r0, g0, rg], [ri, g0, rg], [ri, g1, rg], [r1, g1, rg]], above);
 }
 // lente: lateral reta (base -> topo), borda arredondada tangente a uma calota esférica
 function lensProfile(p) {
@@ -564,10 +597,7 @@ async function measurePhoto() {
   return { pts, height: z1 - z0, axis, z0 };
 }
 // raio externo do modelo em cada altura (maior raio entre os segmentos que cruzam z)
-function modelRadii(p, zs) {
-  const pr = profile(p).pts;
-  return zs.map(z => { let best = 0; for (let i = 1; i < pr.length; i++) { const [r1, z1] = pr[i - 1], [r2, z2] = pr[i]; if ((z - z1) * (z - z2) <= 0 && z1 !== z2) { const r = r1 + (r2 - r1) * (z - z1) / (z2 - z1); if (r > best) best = r; } } return best; });
-}
+function modelRadii(p, zs) { const pr = profile(p).pts; return zs.map(z => radiusAt(pr, z)); }
 function fitError(p, m) {
   const r = modelRadii(p, m.pts.map(q => q.z));
   let e = 0; m.pts.forEach((q, i) => { const d = Math.min(3, Math.abs(r[i] - q.r)); e += d * d; });
@@ -588,21 +618,22 @@ function nelderMead(f, x0, step, iters) {
   }
   const b = F.indexOf(Math.min(...F)); return { x: S[b], f: F[b] };
 }
-function runFit(m) {
+function runFit(m, extra = []) {
+  const KEYS_ = FIT_KEYS.concat(extra);
   const Hb = m.height, base = { ...P, H: Hb + P.lens_h };
-  const bounds = FIT_KEYS.map(k => k === 'groove_z' ? [5, Hb - 1] : RANGE[k]);
-  const toP = u => { const q = { ...base }; FIT_KEYS.forEach((k, i) => { const [a, b] = bounds[i]; q[k] = a + (b - a) * Math.min(1, Math.max(0, u[i])); }); q.lens_d = Math.min(q.lens_d, q.D); return q; };
+  const bounds = KEYS_.map(k => (k === 'groove_z' || k === 'shoulder_z') ? [5, Hb - 1] : RANGE[k]);
+  const toP = u => { const q = { ...base }; KEYS_.forEach((k, i) => { const [a, b] = bounds[i]; q[k] = a + (b - a) * Math.min(1, Math.max(0, u[i])); }); q.lens_d = Math.min(q.lens_d, q.D); return q; };
   const f = u => fitError(toP(u), m) + u.reduce((s, v) => s + (v < 0 ? -v : v > 1 ? v - 1 : 0), 0);
-  let u = FIT_KEYS.map((k, i) => { const [a, b] = bounds[i]; return (Math.min(b, Math.max(a, base[k])) - a) / (b - a); }), best = null;
+  let u = KEYS_.map((k, i) => { const [a, b] = bounds[i]; return (Math.min(b, Math.max(a, base[k])) - a) / (b - a); }), best = null;
   for (let r = 0; r < 4; r++) { const res = nelderMead(f, u, r ? 0.08 : 0.2, 700); if (!best || res.f < best.f) best = res; u = best.x; }
   const q = toP(best.x);
   const round = (k, v) => { const st = SPEC.flatMap(([, it]) => it).find(i => i[0] === k)[4]; return +(Math.round(v / st) * st).toFixed(3); };
-  FIT_KEYS.forEach(k => { q[k] = round(k, q[k]); }); q.H = round('H', q.H);
+  KEYS_.forEach(k => { q[k] = round(k, q[k]); }); q.H = round('H', q.H);
   q.lens_top_d = +(q.lens_d + (P.lens_top_d - P.lens_d)).toFixed(2);
-  return { q, before: fitError({ ...P }, m), after: fitError(q, m) };
+  return { q, keys: KEYS_, before: fitError({ ...P }, m), after: fitError(q, m) };
 }
 function showFit(res, m) {
-  const box = document.getElementById('fitbox'), keys = ['H', ...FIT_KEYS, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
+  const box = document.getElementById('fitbox'), keys = ['H', ...res.keys, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
   const off = Math.abs(m.axis) > 0.8 ? `<p>A foto está ${m.axis.toFixed(1)} mm fora do eixo. Isso não afeta o ajuste, mas dá para acertar em "Mover X".</p>` : '';
   box.innerHTML = `<p>Diferença média entre o contorno da foto (tracejado verde) e o modelo: <b>${res.before.toFixed(2)} mm</b> → <b class="up">${res.after.toFixed(2)} mm</b></p>${off}
     <table><tbody>${keys.map(k => `<tr><td>${LABEL[k] || k}</td><td>${P[k]}</td><td class="up">${res.q[k]}</td></tr>`).join('') || '<tr><td>Nenhuma medida mudou.</td></tr>'}</tbody></table>
@@ -619,7 +650,7 @@ document.getElementById('fit').addEventListener('click', async () => {
     const m = await measurePhoto();
     fitMeasure = m; drawProfile(P);
     await new Promise(r => setTimeout(r, 30));
-    const res = runFit(m); fitSuggestion = res; showFit(res, m);
+    const res = runFit(m, P.shoulder_link ? [] : ['shoulder_z']); fitSuggestion = res; showFit(res, m);
     t.textContent = '';
   } catch (e) { t.textContent = e.message || 'Não deu para analisar a foto.'; }
   btn.disabled = !photoURL; btn.textContent = 'Ajustar pela foto';
@@ -663,7 +694,8 @@ document.getElementById('vsave').addEventListener('click', () => {
 document.getElementById('vname').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('vsave').click(); });
 renderVersions();
 
-buildFields(document.getElementById('fields'), SPEC, P, update);
+buildFields(document.getElementById('fields'), SPEC, P, () => { linkState(); update(); });
+linkState();
 buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); });
 applyTheme(); resize(); update();
 if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
