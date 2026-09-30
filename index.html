@@ -111,7 +111,8 @@ button:disabled { opacity: .45; cursor: default; }
       <div id="ovfields"></div>
       <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
       <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
-      <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto para a altura atual do corpo (use quando a altura foi medida com paquímetro)</label></div>
+      <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto pela altura atual (use quando a altura foi medida com paquímetro)</label></div>
+      <div class="row check"><label for="fitlens"><input type="checkbox" id="fitlens"> A lente aparece na foto (a altura da foto é a altura total)</label></div>
       <div id="fitbox" class="fitbox" hidden></div>
     </fieldset>
     <div id="fields"></div>
@@ -619,6 +620,9 @@ async function measurePhoto() {
   const keys = [...bins.keys()].sort((a, b) => a - b), z0 = keys[0] * step, z1 = keys[keys.length - 1] * step;
   const centers = keys.map(b => (bins.get(b)[0] + bins.get(b)[1]) / 2).sort((a, b) => a - b), axis = centers[centers.length >> 1];
   const pts = keys.filter(b => b * step > z0 + 0.6 && b * step < z1 - 0.6).map(b => ({ z: b * step - z0, r: (bins.get(b)[1] - bins.get(b)[0]) / 2 }));
+  // abaixo do ponto mais largo a manopla só afina: alargamentos ali são sombra ou apoio
+  let iMax = 0; pts.forEach((q, i) => { if (q.r > pts[iMax].r) iMax = i; });
+  for (let i = iMax - 1; i >= 0; i--) pts[i].r = Math.min(pts[i].r, pts[i + 1].r);
   let touches = false; for (let x = 0; x < w && !touches; x++) touches = lab[x] === pick || lab[(h - 1) * w + x] === pick;
   for (let y = 0; y < h && !touches; y++) touches = lab[y * w] === pick || lab[y * w + w - 1] === pick;
   return { pts, height: z1 - z0, axis, z0, touches };
@@ -672,7 +676,7 @@ function runFit(m, extra = []) {
 function showFit(res, m) {
   const box = document.getElementById('fitbox'), keys = ['H', ...res.keys, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
   const warnEdge = m.touches ? '<p>A peça encosta na borda da foto: a parte cortada não entra na medida.</p>' : '';
-  const off = warnEdge + (document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>');
+  const off = warnEdge + (document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>') + (document.getElementById('fitlens').checked ? `<p>Os ${P.lens_h} mm de cima (lente) ficaram fora da medida do corpo.</p>` : '');
   box.innerHTML = `<p>Diferença média entre o contorno da foto (tracejado verde) e o modelo: <b>${res.before.toFixed(2)} mm</b> → <b class="up">${res.after.toFixed(2)} mm</b></p>${off}
     <table><tbody>${keys.map(k => `<tr><td>${LABEL[k] || k}</td><td>${P[k]}</td><td class="up">${res.q[k]}</td></tr>`).join('') || '<tr><td>Nenhuma medida mudou.</td></tr>'}</tbody></table>
     <div class="btns"><button class="primary" id="fitapply">Aplicar</button><button id="fitdrop">Descartar</button></div>
@@ -689,12 +693,15 @@ document.getElementById('fit').addEventListener('click', async () => {
     // centraliza: eixo da peça em x = 0 e base em z = 0
     O.ov_x -= m.axis; O.ov_y -= m.z0;
     // escala opcional em torno da base (0, 0), mantendo a altura do corpo que está na tela
+    const withLens = document.getElementById('fitlens').checked;
     if (document.getElementById('fitscale').checked && m.height > 0) {
-      const k = (P.H - P.lens_h) / m.height;
+      const k = (withLens ? P.H : P.H - P.lens_h) / m.height;
       O.ov_scale *= k; O.ov_x *= k; O.ov_y *= k;
     }
     syncFields(O); saveOverlay();
     m = await measurePhoto();
+    // com a lente na foto, corta a faixa de cima (espessura da lente) e mede só o corpo
+    if (withLens) { const hb = m.height - P.lens_h; m = { ...m, pts: m.pts.filter(q => q.z <= hb - 0.3), height: hb }; }
     fitMeasure = m; drawProfile(P);
     await new Promise(r => setTimeout(r, 30));
     const res = runFit(m, P.shoulder_link ? [] : ['shoulder_z']); fitSuggestion = res; showFit(res, m);
