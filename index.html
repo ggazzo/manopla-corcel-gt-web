@@ -53,6 +53,8 @@ button:focus-visible, input:focus-visible, .file:focus-within { outline: 2px sol
 .hint { color: var(--muted); font-size: 12px; margin: 0; }
 pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 8px; margin: 0; white-space: pre; overflow-x: auto; }
 .linkbox { width: 100%; box-sizing: border-box; font: 12px var(--f-mono); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); }
+.undo { align-items: center; }
+button:disabled { opacity: .45; cursor: default; }
 .vsave { display: flex; gap: 8px; }
 .vsave input { flex: 1; min-width: 0; font: 13px var(--f-body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
 .vlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -76,6 +78,11 @@ pre#out { font-family: var(--f-mono); font-size: 12px; background: var(--bg); bo
   </header>
 
   <section class="panel controls" aria-label="Medidas">
+    <div class="btns undo">
+      <button id="undo" disabled>Desfazer</button>
+      <button id="redo" disabled>Refazer</button>
+      <span class="hint">Ctrl+Z ou Esc · Ctrl+Shift+Z</span>
+    </div>
     <fieldset>
       <legend>Versões</legend>
       <div class="vsave">
@@ -166,7 +173,7 @@ function buildFields(host, spec, obj, onChange) {
       row.innerHTML = `<label for="n_${key}">${label}</label><input type="number" id="n_${key}" min="${min}" max="${max}" step="${step}"><input type="range" id="r_${key}" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
       const n = row.querySelector('input[type=number]'), r = row.querySelector('input[type=range]');
       n.value = r.value = obj[key];
-      const set = v => { v = parseFloat(v); if (isNaN(v)) return; obj[key] = v; n.value = r.value = v; onChange(); };
+      const set = v => { v = parseFloat(v); if (isNaN(v) || v === obj[key]) return; beforeEdit(obj); obj[key] = v; n.value = r.value = v; onChange(); };
       r.addEventListener('input', e => set(e.target.value));
       n.addEventListener('change', e => set(e.target.value));
       fs.appendChild(row);
@@ -359,7 +366,36 @@ function update() {
   document.getElementById('out').textContent = scadBlock(P);
   document.getElementById('link').value = shareLink();
   try { localStorage.setItem('manopla-params', JSON.stringify(P)); } catch (e) {}
+  // endereço acompanha as medidas em tempo real (no visualizador do Claude só muda o quadro interno)
+  try { history.replaceState(null, '', '#' + encodeHash(P)); } catch (e) {}
 }
+
+/* ---------- desfazer / refazer ---------- */
+// um arraste de slider vira um passo só: o estado é guardado no começo e fecha após 600 ms parado
+const undoStack = [], redoStack = [];
+let editOpen = false, editTimer = 0;
+function snap() { return JSON.stringify(P); }
+function refreshUndo() { document.getElementById('undo').disabled = !undoStack.length; document.getElementById('redo').disabled = !redoStack.length; }
+function beforeEdit(obj) {
+  if (obj !== P) return;
+  if (!editOpen) { undoStack.push(snap()); if (undoStack.length > 200) undoStack.shift(); redoStack.length = 0; editOpen = true; refreshUndo(); }
+  clearTimeout(editTimer); editTimer = setTimeout(() => { editOpen = false; }, 600);
+}
+function checkpoint() { editOpen = false; beforeEdit(P); editOpen = false; clearTimeout(editTimer); }
+function restore(from, to) {
+  if (!from.length) return;
+  editOpen = false; clearTimeout(editTimer);
+  to.push(snap()); Object.assign(P, JSON.parse(from.pop()));
+  syncFields(P); update(); refreshUndo();
+}
+document.getElementById('undo').addEventListener('click', () => restore(undoStack, redoStack));
+document.getElementById('redo').addEventListener('click', () => restore(redoStack, undoStack));
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'vname') return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if ((mod && k === 'z' && !e.shiftKey) || (e.key === 'Escape' && !mod)) { e.preventDefault(); restore(undoStack, redoStack); }
+  else if (mod && ((k === 'z' && e.shiftKey) || k === 'y')) { e.preventDefault(); restore(redoStack, undoStack); }
+});
 document.getElementById('copy').addEventListener('click', () => {
   const t = document.getElementById('toast'), txt = scadBlock(P);
   navigator.clipboard.writeText(txt).then(() => { t.textContent = 'Medidas copiadas.'; }, () => {
@@ -372,8 +408,8 @@ document.getElementById('copylink').addEventListener('click', () => {
   const t = document.getElementById('toast'), box = document.getElementById('link');
   navigator.clipboard.writeText(box.value).then(() => { t.textContent = 'Link copiado.'; }, () => { box.focus(); box.select(); t.textContent = 'Não deu para copiar direto. O link ficou selecionado: use Ctrl/Cmd+C.'; });
 });
-window.addEventListener('hashchange', () => { if (readHash()) { syncFields(P); update(); } });
-document.getElementById('reset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncFields(P); update(); });
+window.addEventListener('hashchange', () => { const before = snap(); if (readHash() && snap() !== before) { undoStack.push(before); redoStack.length = 0; refreshUndo(); syncFields(P); update(); } });
+document.getElementById('reset').addEventListener('click', () => { checkpoint(); Object.assign(P, DEFAULTS); syncFields(P); update(); });
 // foto reduzida para caber no armazenamento do navegador (~5 MB)
 const PHOTO_KEY = 'manopla-photo', OV_KEY = 'manopla-overlay';
 function saveOverlay() { try { localStorage.setItem(OV_KEY, JSON.stringify(O)); } catch (e) {} }
@@ -421,7 +457,7 @@ function renderVersions() {
     li.querySelector('b').textContent = v.name;
     const [load, del] = li.querySelectorAll('button');
     load.addEventListener('click', () => {
-      Object.assign(P, DEFAULTS, v.params); Object.assign(O, v.overlay || {});
+      checkpoint(); Object.assign(P, DEFAULTS, v.params); Object.assign(O, v.overlay || {});
       current = v.id; syncFields(P); syncFields(O); update(); saveOverlay(); renderVersions();
       document.getElementById('toast').textContent = `Versão "${v.name}" carregada.`;
     });
