@@ -823,28 +823,14 @@ document.getElementById('camlevel').addEventListener('click', async () => {
 const camAna = document.createElement('canvas');
 function camAnalyze() {
   const vw = camVideo.videoWidth, vh = camVideo.videoHeight; if (!vw) return;
-  const W = 220, H = Math.round(vh * W / vw); camAna.width = W; camAna.height = H;
-  const g = camAna.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1px)'; g.drawImage(camVideo, 0, 0, W, H);
-  const d = g.getImageData(0, 0, W, H).data, n = W * H;
-  const border = []; for (let x = 0; x < W; x++) border.push(x, (H - 1) * W + x); for (let y = 1; y < H - 1; y++) border.push(y * W, y * W + W - 1);
-  const med = ch => { const v = border.map(i => d[i * 4 + ch]).sort((a, b) => a - b); return v[v.length >> 1]; };
-  const ref = [med(0), med(1), med(2)], dref = i => Math.hypot(d[i * 4] - ref[0], d[i * 4 + 1] - ref[1], d[i * 4 + 2] - ref[2]);
-  const bd = border.map(dref).sort((a, b) => a - b), tol = Math.max(10, bd[Math.floor(bd.length * 0.8)] * 0.9) * (O.ov_sens || 1);
-  // mesmo bloqueio pelas bordas da aba Manopla (gradiente de luminância)
-  const lum = new Float32Array(n), grd = new Float32Array(n);
-  for (let i = 0; i < n; i++) lum[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
-  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; grd[i] = Math.abs(lum[i + 1] - lum[i - 1]) + Math.abs(lum[i + W] - lum[i - W]); }
-  const gs = []; for (let i = 0; i < n; i += 5) gs.push(grd[i]); gs.sort((a, b) => a - b);
-  const eThr = (O.ov_edge || 0) > 0 ? (gs[Math.floor(gs.length * 0.95)] || 1) * (1.6 - 1.4 * O.ov_edge) : Infinity;
-  const bg = new Uint8Array(n), st = [];
-  for (const i of border) if (dref(i) < tol) { bg[i] = 1; st.push(i); }
-  while (st.length) { const i = st.pop(), x = i % W; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < n && !bg[j] && Math.abs((j % W) - x) <= 1 && dref(j) < tol && grd[j] <= eThr) { bg[j] = 1; st.push(j); } }
-  // peça = mancha não-fundo que passa pelo centro (ou a maior)
-  const lab = new Int32Array(n).fill(-1), sizes = [];
-  for (let s0 = 0; s0 < n; s0++) { if (bg[s0] || lab[s0] >= 0) continue; const id = sizes.length; let c = 0; const q = [s0]; lab[s0] = id; while (q.length) { const i = q.pop(), x = i % W; c++; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < n && !bg[j] && lab[j] < 0 && Math.abs((j % W) - x) <= 1) { lab[j] = id; q.push(j); } } sizes.push(c); }
+  const W = 320, H = Math.round(vh * W / vw); camAna.width = W; camAna.height = H;
+  const g = camAna.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1.5px)'; g.drawImage(camVideo, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, n = W * H, { lum, grad, g95 } = sobel(d, W, H);
+  const sg = segmentImage(d, W, H, grad, g95, W >> 1, H >> 1);
+  const sizes = sg ? sg.sizes : [], bg = sg && sg.bg, lab = sg && sg.lab, ref = sg && sg.ref;
   const checks = [];
   if (!sizes.length) { camDraw(null); camChecks([['bad', 'Não achei a peça', 'O fundo ocupa a imagem toda. Aproxime ou use um fundo que contraste.']]); return; }
-  const ctr = lab[(H >> 1) * W + (W >> 1)], big = sizes.indexOf(Math.max(...sizes)), pick = ctr >= 0 && sizes[ctr] > sizes[big] * 0.3 ? ctr : big;
+  const pick = sg.pick;
   let x0 = W, x1 = 0, y0 = H, y1 = 0, cr = 0, cg = 0, cb = 0, cnt = 0, touch = false, edgeSum = 0, edgeN = 0;
   const rows = new Map();
   for (let i = 0; i < n; i++) {
@@ -862,6 +848,26 @@ function camAnalyze() {
   const ys = [...rows.keys()].filter(y => y > y0 + bh * 0.1 && y < y1 - bh * 0.1), cen = ys.map(y => (rows.get(y)[0] + rows.get(y)[1]) / 2);
   const cm = cen.reduce((a, b) => a + b, 0) / Math.max(1, cen.length), sym = cen.reduce((a, c) => a + Math.abs(c - cm), 0) / Math.max(1, cen.length) / bw;
   const sharp = edgeN ? edgeSum / edgeN / Math.max(20, contrast) : 0;
+  // friso e lente: linhas horizontais que atravessam o miolo da peça (mesma ideia da aba Manopla)
+  const acc = new Float32Array(H), cntR = new Uint16Array(H), mrg = 3 * W;
+  for (let i = mrg; i < n - mrg; i++) {
+    if (lab[i] !== pick || lab[i - mrg] !== pick || lab[i + mrg] !== pick) continue;
+    const x = i % W, y = (i / W) | 0, rw = rows.get(y); if (!rw) continue;
+    const c = (rw[0] + rw[1]) / 2, half = (rw[1] - rw[0]) / 2; if (Math.abs(x - c) > half * 0.6) continue;
+    acc[y] += Math.abs(lum[i + W] - lum[i - W]); cntR[y]++;
+  }
+  const rv = []; for (let y = y0; y <= y1; y++) rv.push(cntR[y] >= 3 ? acc[y] / cntR[y] : 0);
+  const sm = rv.map((v, i) => (rv[i - 1] ?? v) * 0.25 + v * 0.5 + (rv[i + 1] ?? v) * 0.25);
+  const medv = sm.filter(v => v > 0).sort((a, b) => a - b)[Math.floor(sm.length / 2)] || 1, nrm = sm.map(v => v / medv);
+  // lente: faixa forte que desce do topo; friso: pico mais forte entre 30% da altura e a lente
+  let topMax = 0; for (let k = 0; k < Math.ceil(nrm.length * 0.2); k++) topMax = Math.max(topMax, nrm[k]);
+  // emenda lente/corpo = última linha forte dentro dos 18% de cima (a lente pode ter várias faixas)
+  const thrL = Math.max(4, topMax * 0.3), gapMax = Math.max(2, Math.round(nrm.length * 0.015));
+  let lowK = 0; for (let q = 0; q < nrm.length * 0.18; q++) if (nrm[q] >= thrL) lowK = q;
+  const lensOk = topMax >= 4 && lowK > 0 && lowK < nrm.length * 0.25, lensY = lensOk ? y0 + lowK : null;
+  let gBest = 0, gK = -1; for (let q = (lensOk ? lowK + gapMax + 1 : 0); q < nrm.length * 0.7; q++) if (nrm[q] > gBest) { gBest = nrm[q]; gK = q; }
+  const grooveY = gBest > 2.5 ? y0 + gK : null;
+  const zPct = y => (y1 - y) / bh;  // altura a partir da base, em fração da peça
   const lvl = v => v == null ? null : Math.abs(v);
   const roll = lvl(cam.roll), pitch = lvl(cam.pitch);
   checks.push(roll == null ? ['', 'Nível lateral', 'Toque em "Ligar nível" (só no celular).'] : roll < 1 ? ['ok', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Reto.'] : roll < 3 ? ['warn', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Quase: gire o celular até zerar.'] : ['bad', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Celular torto: a peça sai inclinada.']);
@@ -871,9 +877,12 @@ function camAnalyze() {
   checks.push(Math.abs(cx) < 0.06 ? ['ok', 'Centralizada', ''] : ['warn', 'Fora do centro', 'Centralizar na linha do meio reduz a distorção da lente.']);
   checks.push(contrast > 60 ? ['ok', 'Contraste bom com o fundo', ''] : contrast > 30 ? ['warn', 'Contraste fraco', 'Fundo mais claro (papel branco) separa melhor a peça escura.'] : ['bad', 'Pouco contraste', 'Peça e fundo parecidos: a detecção vai falhar.']);
   checks.push(sharp > 0.5 ? ['ok', 'Borda nítida', ''] : sharp > 0.3 ? ['warn', 'Borda meio borrada', 'Toque na peça para focar; mais luz ajuda.'] : ['bad', 'Imagem borrada', 'Segure firme, foque na peça.']);
+  const mm = f => P.H ? ` ≈ ${(f * P.H).toFixed(1)} mm se a peça tem ${P.H} mm` : '';
+  checks.push(grooveY != null ? ['ok', `Friso detectado a ${Math.round(zPct(grooveY) * 100)}% da altura`, mm(zPct(grooveY)).trim()] : ['warn', 'Friso não aparece', 'Luz de lado (rasante) realça o friso.']);
+  checks.push(lensY != null ? ['ok', `Lente detectada: ${Math.round((1 - zPct(lensY)) * 100)}% da altura`, mm(1 - zPct(lensY)).trim()] : ['warn', 'Lente não aparece', 'Deixe o topo à vista, com contraste.']);
   checks.push(sym < 0.02 ? ['ok', 'Silhueta simétrica', ''] : sym < 0.05 ? ['warn', 'Silhueta um pouco torta', 'Peça inclinada ou reflexo comendo um lado.'] : ['bad', 'Silhueta torta', 'Endireite a peça ou tire o reflexo da borda.']);
   camChecks(checks);
-  cam.last = { pick, lab, W, H, x0, x1, y0, y1 };
+  cam.last = { pick, lab, W, H, x0, x1, y0, y1, grooveY, lensY };
   camDraw(cam.last);
 }
 function camChecks(list) {
@@ -894,7 +903,16 @@ function camDraw(a) {
     g.beginPath(); g.moveTo(cx - L * Math.cos(ang), cy - L * Math.sin(ang)); g.lineTo(cx + L * Math.cos(ang), cy + L * Math.sin(ang)); g.stroke();
   }
   if (!a) return;
-  const k = VW / a.W; g.fillStyle = 'rgba(63,210,154,.9)';
+  const k = VW / a.W;
+  // linhas do friso e da lente detectados
+  g.font = `${12 * devicePixelRatio}px IBM Plex Mono, monospace`; g.lineWidth = 2 * devicePixelRatio; g.setLineDash([8, 4]);
+  for (const [y, lbl, col] of [[a.grooveY, 'friso', '#3fd29a'], [a.lensY, 'lente', '#e0a83a']]) {
+    if (y == null) continue;
+    const yy = oy + y * k, xa = ox + a.x0 * k - 10, xb = ox + a.x1 * k + 10;
+    g.strokeStyle = col; g.beginPath(); g.moveTo(xa, yy); g.lineTo(xb, yy); g.stroke();
+    g.fillStyle = col; g.fillText(lbl, xb + 6, yy + 4 * devicePixelRatio);
+  }
+  g.setLineDash([]); g.fillStyle = 'rgba(63,210,154,.9)';
   for (let y = 1; y < a.H - 1; y++) for (let x = 1; x < a.W - 1; x++) { const i = y * a.W + x; if (a.lab[i] === a.pick && (a.lab[i - 1] !== a.pick || a.lab[i + 1] !== a.pick || a.lab[i - a.W] !== a.pick || a.lab[i + a.W] !== a.pick)) g.fillRect(ox + x * k - k / 2, oy + y * k - k / 2, Math.max(2, k * 0.8), Math.max(2, k * 0.8)); }
 }
 document.getElementById('camshot').addEventListener('click', () => {
@@ -1014,15 +1032,10 @@ function modelToPhoto(x, z) {
 }
 // separa a peça do fundo "enchendo" o fundo a partir das bordas da foto: brilhos e reflexos
 // dentro da peça não atrapalham, porque o preenchimento nunca começa lá dentro
-let photoCache = null;
-// pixels (com desfoque) e gradiente da foto, calculados uma vez por foto
-async function photoPixels() {
-  if (photoCache && photoCache.url === photoURL) return photoCache;
-  const im = new Image(); im.src = photoURL; await im.decode();
-  const k = Math.min(1, 700 / Math.max(photoSize[0], photoSize[1])), w = Math.round(photoSize[0] * k), h = Math.round(photoSize[1] * k), n = w * h;
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1.5px)'; g.drawImage(im, 0, 0, w, h);
-  const d = g.getImageData(0, 0, w, h).data, lum = new Float32Array(n), grad = new Float32Array(n), gyA = new Float32Array(n);
+// separação peça/fundo usada pela foto e pela câmera: enche o fundo a partir das bordas da imagem,
+// parando em bordas fortes (grad > limite) e aceitando variações suaves de luz do fundo
+function sobel(d, w, h) {
+  const n = w * h, lum = new Float32Array(n), grad = new Float32Array(n), gyA = new Float32Array(n);
   for (let i = 0; i < n; i++) lum[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
     const i = y * w + x, L = o => lum[i + o];
@@ -1030,11 +1043,10 @@ async function photoPixels() {
     grad[i] = Math.hypot(gx, gy); gyA[i] = Math.abs(gy);
   }
   const sample = []; for (let i = 0; i < n; i += 7) sample.push(grad[i]); sample.sort((a, b) => a - b);
-  photoCache = { url: photoURL, k, w, h, n, d, grad, gyA, g95: sample[Math.floor(sample.length * 0.95)] || 1 };
-  return photoCache;
+  return { lum, grad, gyA, g95: sample[Math.floor(sample.length * 0.95)] || 1 };
 }
-async function measurePhoto() {
-  const { k, w, h, n, d, grad, gyA, g95 } = await photoPixels();
+function segmentImage(d, w, h, grad, g95, sx, sy) {
+  const n = w * h;
   // bordas fortes (contorno da peça) seguram o preenchimento do fundo
   const edgeThr = O.ov_edge > 0 ? g95 * (1.6 - 1.4 * O.ov_edge) : Infinity;
   const dist = (i, j) => Math.hypot(d[i * 4] - d[j * 4], d[i * 4 + 1] - d[j * 4 + 1], d[i * 4 + 2] - d[j * 4 + 2]);
@@ -1056,8 +1068,7 @@ async function measurePhoto() {
       if (dr < tol || (dist(i, j) < tol * 0.35 && dr < tol * 2.5)) { bg[j] = 1; stack.push(j); }
     }
   }
-  // peça = maior mancha que não é fundo, preferindo a que contém o eixo
-  let [sx, sy] = modelToPhoto(0, P.H * 0.4).map(v => Math.round(v * k));
+  // peça = maior mancha que não é fundo, preferindo a que contém a semente (sx, sy)
   const lab = new Int32Array(n).fill(-1), sizes = [];
   for (let s0 = 0; s0 < n; s0++) {
     if (bg[s0] || lab[s0] >= 0) continue;
@@ -1065,9 +1076,29 @@ async function measurePhoto() {
     while (st.length) { const i = st.pop(), x = i % w; cnt++; for (const j of [i - 1, i + 1, i - w, i + w]) if (j >= 0 && j < n && !bg[j] && lab[j] < 0 && Math.abs((j % w) - x) <= 1) { lab[j] = id; st.push(j); } }
     sizes.push(cnt);
   }
-  if (!sizes.length) throw new Error('Não achei a peça: a foto inteira parece fundo. Diminua a "Sensibilidade do fundo".');
+  if (!sizes.length) return null;
   const inside = sx >= 0 && sy >= 0 && sx < w && sy < h ? lab[sy * w + sx] : -1;
   const big = sizes.indexOf(Math.max(...sizes)), pick = inside >= 0 && sizes[inside] > sizes[big] * 0.3 ? inside : big;
+  return { bg, lab, pick, sizes, ref, tol };
+}
+let photoCache = null;
+// pixels (com desfoque) e gradiente da foto, calculados uma vez por foto
+async function photoPixels() {
+  if (photoCache && photoCache.url === photoURL) return photoCache;
+  const im = new Image(); im.src = photoURL; await im.decode();
+  const k = Math.min(1, 700 / Math.max(photoSize[0], photoSize[1])), w = Math.round(photoSize[0] * k), h = Math.round(photoSize[1] * k), n = w * h;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1.5px)'; g.drawImage(im, 0, 0, w, h);
+  const d = g.getImageData(0, 0, w, h).data, { grad, gyA, g95 } = sobel(d, w, h);
+  photoCache = { url: photoURL, k, w, h, n, d, grad, gyA, g95 };
+  return photoCache;
+}
+async function measurePhoto() {
+  const { k, w, h, n, d, grad, gyA, g95 } = await photoPixels();
+  let [sx, sy] = modelToPhoto(0, P.H * 0.4).map(v => Math.round(v * k));
+  const sg = segmentImage(d, w, h, grad, g95, sx, sy);
+  if (!sg) throw new Error('Não achei a peça: a foto inteira parece fundo. Diminua a "Sensibilidade do fundo".');
+  const { bg, lab, pick, sizes } = sg;
   if (sizes[pick] > n * 0.8) throw new Error('Não consegui separar a peça do fundo. Aumente a "Sensibilidade do fundo" ou use uma foto com fundo que contraste.');
   const bins = new Map(), step = 0.5;
   for (let i = 0; i < n; i++) {
@@ -1108,10 +1139,9 @@ async function measurePhoto() {
   // lente: faixa de bordas fortes que desce do topo; a emenda com o corpo é onde a faixa acaba
   const nrm = sm.map(v => v / medv);
   let topMax = 0; for (let b = Math.floor(nb * 0.8); b <= nb; b++) topMax = Math.max(topMax, nrm[b]);
+  // emenda lente/corpo = última linha forte (de cima para baixo) dentro dos 18% de cima
   const thrL = Math.max(4, topMax * 0.3);
-  let b = nb; while (b > 0 && nrm[b] < thrL) b--;            // pula o finzinho do topo
-  let low = b, gap = 0;
-  for (; b > 0; b--) { if (nrm[b] >= thrL) { low = b; gap = 0; } else if (++gap > 2) break; }
+  let low = nb; for (let q = nb; q >= nb * 0.82; q--) if (nrm[q] >= thrL) low = q;
   const lensH = H - low * zs, lensZ = topMax >= 4 && lensH >= 1 && lensH <= H * 0.25 ? low * zs : null;
   // friso: pico mais forte abaixo da lente; posição = centro da parte do pico acima da metade
   const gp = peak(H * 0.3, (lensZ ?? H) - 1);
