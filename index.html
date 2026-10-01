@@ -9,7 +9,7 @@
 /* layout: bancada de oficina — painel de ajustes à esquerda, peça 3D e prancheta de perfil lado a lado */
 :root {
   --bg: #e9ecee; --panel: #f7f8f9; --ink: #16191b; --muted: #5d666c; --line: #cfd5d9;
-  --accent: #a3232a; --chrome: #b9c0c5; --grid: #d8dde0; --grid-strong: #aeb6bb; --body: #141414; --fit: #11805a;
+  --accent: #a3232a; --chrome: #b9c0c5; --grid: #d8dde0; --grid-strong: #aeb6bb; --body: #141414; --fit: #11805a; --warn: #b7791f;
   --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --f-body: "IBM Plex Sans", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -17,10 +17,10 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #121517; --panel: #1b1f22; --ink: #e6e9eb; --muted: #97a1a7; --line: #2d3338;
-  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; --fit: #3fd29a; color-scheme: dark } }
+  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; --fit: #3fd29a; --warn: #e0a83a; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #121517; --panel: #1b1f22; --ink: #e6e9eb; --muted: #97a1a7; --line: #2d3338;
-  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; --fit: #3fd29a; color-scheme: dark }
+  --accent: #d9454c; --chrome: #8a939a; --grid: #252b2f; --grid-strong: #3c444a; --body: #050505; --fit: #3fd29a; --warn: #e0a83a; color-scheme: dark }
 
 html, body { height: 100%; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; }
@@ -68,6 +68,8 @@ button:disabled { opacity: .45; cursor: default; }
 .fitbox td:not(:first-child) { text-align: right; }
 .fitbox .up { color: var(--fit); }
 .fitbox p { margin: 0; font-size: 12px; }
+.sel { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.sel select { font: 13px var(--f-body); padding: 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
 .vsave { display: flex; gap: 8px; }
 .vsave input { flex: 1; min-width: 0; font: 13px var(--f-body); padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
 .vlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -83,12 +85,22 @@ button:disabled { opacity: .45; cursor: default; }
 .tabs button { font: 600 15px var(--f-display); text-transform: uppercase; letter-spacing: .08em; padding: 6px 14px; }
 .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .wrap[data-tab="knob"] .emb-only, .wrap[data-tab="emb"] .knob-only { display: none !important; }
+.wrap:not([data-tab="cam"]) .cam-only, .wrap[data-tab="cam"] .knob-only, .wrap[data-tab="cam"] .emb-only { display: none !important; }
+.cam-view { grid-column: 2 / -1; }
+.camstage { position: relative; flex: 1; min-height: 420px; background: #000; overflow: hidden; }
+.camstage video, .camstage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checks li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; font-size: 13px; }
+.checks li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--line); }
+.checks li.ok::before { background: var(--fit); } .checks li.warn::before { background: var(--warn); } .checks li.bad::before { background: var(--accent); }
+.checks small { display: block; color: var(--muted); font-size: 12px; }
+.levelnum { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
 .emb-view { grid-column: 2 / -1; }
 #embThree { flex: 1; min-height: 420px; position: relative; }
 #embThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .legend { display: flex; justify-content: space-around; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font: 12px var(--f-mono); }
-@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view { grid-column: 2; } }
-@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view { grid-column: auto; } .controls { max-height: none; } }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .cam-view { grid-column: 2; } }
+@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .cam-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -99,6 +111,7 @@ button:disabled { opacity: .45; cursor: default; }
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-knob" aria-selected="true">Manopla</button>
       <button role="tab" id="tab-emb" aria-selected="false">Emblema</button>
+      <button role="tab" id="tab-cam" aria-selected="false">Câmera</button>
     </div>
   </header>
 
@@ -123,17 +136,32 @@ button:disabled { opacity: .45; cursor: default; }
         <label class="file">Sobrepor foto de perfil<input type="file" id="photo" accept="image/*"></label>
         <button id="clearphoto">Tirar foto</button>
       </div>
+      <div class="btns">
+        <button id="ruler">Escala por régua</button>
+        <label class="sel">Lado medido <select id="ovside"><option value="0">média dos dois</option><option value="1">só esquerdo</option><option value="2">só direito</option><option value="3">o maior</option></select></label>
+      </div>
+      <div id="rulerbox" class="fitbox" hidden>
+        <p id="rulermsg">Clique em dois pontos da régua (ou da grade) na foto, no perfil.</p>
+        <div class="row" id="rulerrow" hidden><label for="rulermm">Distância real entre os pontos (mm)</label><input type="number" id="rulermm" value="10" step="0.5" min="0.5"></div>
+        <div class="btns"><button class="primary" id="rulerok" hidden>Aplicar escala</button><button id="rulercancel">Cancelar</button></div>
+      </div>
       <div id="ovfields"></div>
       <p class="hint">1. Ajuste escala e posição pela grade. 2. Mexa em sensibilidade e bordas até a área verde cobrir só a peça. 3. Clique em Ajustar pela foto.</p>
       <div class="row check"><label for="livedetect"><input type="checkbox" id="livedetect" checked> Mostrar contorno detectado em tempo real</label></div>
       <p class="hint" id="detinfo"></p>
       <div class="row check"><label for="usefeat"><input type="checkbox" id="usefeat" checked> Usar friso e lente detectados no ajuste</label></div>
-      <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
+      <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button><button id="avgadd" disabled>Adicionar à média</button><button id="avgclear" hidden>Limpar média</button></div>
+      <p class="hint" id="avginfo">Média de fotos: tire 2 ou 3 fotos girando a peça, ajuste a escala de cada uma e clique em "Adicionar à média". O ajuste passa a usar a média.</p>
       <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto pela altura atual (use quando a altura foi medida com paquímetro)</label></div>
       <div class="row check"><label for="fitlens"><input type="checkbox" id="fitlens"> A lente aparece na foto (a altura da foto é a altura total)</label></div>
       <div id="fitbox" class="fitbox" hidden></div>
     </fieldset>
     <div id="fields"></div>
+    <fieldset>
+      <legend>Pontos do contorno livre</legend>
+      <div class="btns"><button id="freephoto">Copiar da foto</button><button id="freemodel">Copiar do modelo</button></div>
+      <p class="hint">O contorno livre troca as fórmulas da saia e do ombro por 14 pontos ligados por curva suave. Arraste cada ponto no perfil (só para os lados). A base, o friso e a lente continuam pelos controles.</p>
+    </fieldset>
     <fieldset>
       <legend>Compartilhar e exportar</legend>
       <input type="text" id="link" readonly aria-label="Link com as medidas" class="linkbox">
@@ -188,41 +216,70 @@ button:disabled { opacity: .45; cursor: default; }
     <div id="embThree"></div>
     <div class="legend"><span>Macho</span><span>Fêmea</span><span>Chapa estampada</span></div>
   </section>
+
+  <section class="panel controls cam-only" aria-label="Assistente de foto">
+    <fieldset>
+      <legend>Assistente de foto</legend>
+      <div class="btns"><button class="primary" id="camstart">Ligar câmera</button><button id="camlevel">Ligar nível</button></div>
+      <p class="hint" id="cammsg">Use o celular, no site do GitHub. A página analisa a imagem ao vivo e mostra o que acertar antes de fotografar.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Nível</legend>
+      <div class="btns"><span class="levelnum" id="camroll">—</span><span class="levelnum" id="campitch">—</span></div>
+      <p class="hint">Giro lateral · inclinação para frente/trás. Os dois perto de 0° = câmera reta, na altura da peça.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Checagem ao vivo</legend>
+      <ul class="checks" id="camchecks"></ul>
+    </fieldset>
+    <fieldset>
+      <div class="btns"><button class="primary" id="camshot" disabled>Fotografar e usar</button></div>
+      <p class="hint">A foto vai para a aba Manopla como foto de referência, com a inclinação medida já corrigida.</p>
+    </fieldset>
+  </section>
+
+  <section class="panel view cam-view cam-only">
+    <h2>Câmera <small>guias: eixo, meio e área ideal</small></h2>
+    <div class="camstage"><video id="camvideo" playsinline autoplay muted></video><canvas id="camover"></canvas></div>
+  </section>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38, lens_top_d: 38, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 35.4, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
   ['Lente', [['lens_d', 'Diâmetro da lente (base = topo do corpo)', 20, 65, 0.5], ['lens_top_d', 'Diâmetro da lente (topo)', 20, 65, 0.5], ['lens_h', 'Espessura da lente', 1, 15, 0.25], ['lens_dome', 'Abaulado do topo', 0, 4, 0.1], ['disc_d', 'Diâmetro do emblema (disco)', 10, 65, 0.1]]],
   ['Friso', [['shoulder_link', 'Friso na altura do ombro', 'bool'], ['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
   ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
+  ['Contorno livre', [['free_body', 'Usar contorno livre (arraste os pontos no perfil)', 'bool']]],
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
   ['Relevo', [['emb_raised', 'Faixas saltadas (desmarcado = afundadas)', 'bool'], ['emb_relief', 'Altura do relevo', 0.1, 1.5, 0.05], ['emb_draft', 'Inclinação da lateral (evita rasgar)', 0, 1, 0.05]]],
   ['Chapa e bloco', [['emb_sheet', 'Espessura da chapa (folga)', 0.1, 1, 0.05], ['emb_block', 'Altura do bloco', 3, 15, 0.5], ['emb_margin', 'Borda além do disco', 3, 15, 0.5]]],
 ];
-const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
-const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4 };
+const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_tilt', 'Câmera inclinada (°): corrige o achatamento', 0, 30, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
+const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4, ov_tilt: 0, ov_side: 0 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
 function migrateO(o, H) { if (o.ov_v !== 2) { o.ov_y = (o.ov_y || 0) + H / 2; o.ov_v = 2; } return o; }
 
 let P = { ...DEFAULTS }, O = { ...OVDEF }, photoURL = null, photoSize = [1, 1];
 try { Object.assign(P, JSON.parse(localStorage.getItem('manopla-params') || '{}')); } catch (e) {}
+if (!Array.isArray(P.curve)) P.curve = [];
 
 // medidas no link: #m1_56_44_... na ordem de DEFAULTS (o visualizador só repassa âncoras simples, sem "=")
 const PAGE_URL = 'https://claude.ai/artifact/8zUaEeTtHt5UJs2pPi4VAG';
 const KEYS = Object.keys(DEFAULTS);
-function encodeHash(p) { return 'm1_' + KEYS.map(k => +(+p[k]).toFixed(3)).join('_'); }
+function encodeHash(p) { return 'm1_' + KEYS.map(k => +(+p[k]).toFixed(3)).join('_') + (p.free_body && p.curve && p.curve.length ? '~' + p.curve.map(r => +r.toFixed(2)).join('_') : ''); }
 function readHash() {
-  const m = /^#?m1_([-0-9._]+)$/.exec(location.hash); if (!m) return false;
+  const m = /^#?m1_([-0-9._]+)(?:~([-0-9._]+))?$/.exec(location.hash); if (!m) return false;
   const v = m[1].split('_').map(Number);
   if (v.length > KEYS.length || v.some(x => !isFinite(x))) return false;
   KEYS.forEach((k, i) => { P[k] = i < v.length ? v[i] : DEFAULTS[k]; });
+  P.curve = m[2] ? m[2].split('_').map(Number).filter(isFinite) : (P.curve || []);
   return true;
 }
 const fromLink = readHash();
@@ -290,6 +347,22 @@ function fillet(pts) {
   }
   return out;
 }
+// contorno livre: FREE_N raios em alturas iguais, da aba até o topo do corpo; o último encosta na lente
+const FREE_N = 14;
+function freeZs(p) { const Hb = p.H - p.lens_h; return [...Array(FREE_N).keys()].map(i => p.lip_h + (Hb - p.lip_h) * i / (FREE_N - 1)); }
+function freeSpline(p) {
+  const zs = freeZs(p), rs = p.curve.slice(); rs[FREE_N - 1] = p.lens_d / 2;
+  const pts = zs.map((z, i) => [Math.max(0.5, rs[i]), z]), out = [];
+  // Catmull-Rom: curva suave passando por todos os pontos
+  for (let i = 0; i < FREE_N - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(FREE_N - 1, i + 2)];
+    for (let k = i ? 1 : 0; k <= 8; k++) {
+      const t = k / 8, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1].map(j => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
+    }
+  }
+  return out.map(([r, z]) => [Math.max(0.5, r), z, 0]);
+}
 function profile(p) {
   const R = p.D / 2, Rl = p.lens_d / 2, Rb = p.bottom_d / 2, Hb = p.H - p.lens_h;
   const link = !!p.shoulder_link, sz = link ? p.groove_z : p.shoulder_z;
@@ -299,6 +372,11 @@ function profile(p) {
   const raw = [[0, 0]];
   if (p.lip_h > 0) raw.push([Rb + p.lip_w, 0, p.r_base], [Rb + p.lip_w, p.lip_h, p.r_lip], [Rb, p.lip_h, p.r_lip]);
   else raw.push([Rb, 0, p.r_base]);
+  if (p.free_body && p.curve && p.curve.length === FREE_N) {
+    raw.push(...freeSpline(p));
+    raw.push([0, Hb]);
+    return { pts: fillet(cutGroove(raw, g0, g1, p.groove_depth, p.r_groove)), Hb, R, Rl, Rb };
+  }
   const N = 24;
   for (let i = 1; i <= N; i++) { const t = i / N; raw.push([Rb + (Rs - Rb) * Math.pow(t, p.skirt_curve) + p.skirt_bulge * Math.sin(Math.PI * Math.pow(t, ex)), p.lip_h + (sz - p.lip_h) * t, i === N && link ? p.r_groove : 0]); }
   // ombro: Bézier que sai em pé do ressalto e chega na borda da lente no ângulo escolhido
@@ -439,7 +517,10 @@ function zoomAt(f, p) {
 }
 svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(Math.pow(1.0015, -e.deltaY), svgPoint(e)); }, { passive: false });
 let drag = null;
-svg.addEventListener('pointerdown', e => { drag = svgPoint(e); svg.setPointerCapture(e.pointerId); svg.classList.add('panning'); });
+svg.addEventListener('pointerdown', e => {
+  if (ruler && ruler.pts.length < 2) { ruler.pts.push(svgPoint(e)); rulerUI(); return; }
+  if (ptDragStart(e)) return;
+  drag = svgPoint(e); svg.setPointerCapture(e.pointerId); svg.classList.add('panning'); });
 svg.addEventListener('pointermove', e => { if (!drag || pv.z === 1) return; const p = svgPoint(e); pv.cx -= p.x - drag.x; pv.cy -= p.y - drag.y; applyView(); });
 svg.addEventListener('pointerup', () => { drag = null; svg.classList.remove('panning'); });
 svg.addEventListener('dblclick', () => { pv.z = 1; applyView(); });
@@ -458,7 +539,7 @@ function drawProfile(p) {
   for (let y = Math.ceil(y0); y <= y0 + h; y++) g += `<line x1="${x0}" y1="${y}" x2="${x0 + W}" y2="${y}" stroke="var(--${y % 10 ? 'grid' : 'grid-strong'})" stroke-width="${y % 10 ? 0.08 : 0.18}"/>`;
   let img = '';
   if (photoURL) {
-    const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale;
+    const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale * tiltK();
     img = `<image href="${photoURL}" x="${O.ov_x - iw / 2}" y="${-O.ov_y - ih / 2}" width="${iw}" height="${ih}" opacity="${O.ov_op}" transform="rotate(${O.ov_rot} ${O.ov_x} ${-O.ov_y})" preserveAspectRatio="none"/>`;
   }
   const right = pts.map(([r, z]) => `${r.toFixed(2)},${(-z).toFixed(2)}`);
@@ -489,13 +570,56 @@ function drawProfile(p) {
   if (fitMeasure) {
     const ax = fitMeasure.axis || 0, z0 = fitMeasure.z0 || 0;
     const R = fitMeasure.pts.map(q => `${(ax + q.r).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' '), L = fitMeasure.pts.map(q => `${(ax - q.r).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' ');
-    if (fitMeasure.maskURL && photoURL) { const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale; meas += `<image href="${fitMeasure.maskURL}" x="${O.ov_x - iw / 2}" y="${-O.ov_y - ih / 2}" width="${iw}" height="${ih}" opacity="0.35" transform="rotate(${O.ov_rot} ${O.ov_x} ${-O.ov_y})" preserveAspectRatio="none"/>`; }
+    if (fitMeasure.maskURL && photoURL) { const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale * tiltK(); meas += `<image href="${fitMeasure.maskURL}" x="${O.ov_x - iw / 2}" y="${-O.ov_y - ih / 2}" width="${iw}" height="${ih}" opacity="0.35" transform="rotate(${O.ov_rot} ${O.ov_x} ${-O.ov_y})" preserveAspectRatio="none"/>`; }
     const f = fitMeasure.features || {}, xr = Math.max(...fitMeasure.pts.map(q => q.r)) + 4;
     for (const [z, lbl] of [[f.grooveZ, 'friso'], [f.lensZ, 'lente']]) if (z != null) meas += `<line x1="${ax - xr}" y1="${-(z + z0)}" x2="${ax + xr}" y2="${-(z + z0)}" stroke="var(--fit)" stroke-width="0.3" stroke-dasharray="1.5 0.8"/><text x="${ax + xr + 0.5}" y="${-(z + z0) + 0.9}" fill="var(--fit)" font-family="IBM Plex Mono, monospace" font-size="2.4">${lbl} ${z.toFixed(1)}</text>`;
-    meas += `<polyline points="${R}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/><polyline points="${L}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/>`;
+    // bordas reais de cada lado (tracejado) e mapa de erro do modelo sobre o raio usado (linha colorida)
+    const RL = fitMeasure.pts.filter(q => q.rl != null);
+    const edgeR = RL.map(q => `${(ax + q.rr).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' '), edgeL = RL.map(q => `${(ax - q.rl).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' ');
+    meas += RL.length ? `<polyline points="${edgeR}" fill="none" stroke="var(--fit)" stroke-width="0.3" stroke-dasharray="0.8 0.5"/><polyline points="${edgeL}" fill="none" stroke="var(--fit)" stroke-width="0.3" stroke-dasharray="0.8 0.5"/>`
+      : `<polyline points="${R}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/><polyline points="${L}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/>`;
+    const mr = modelRadii(p, fitMeasure.pts.map(q => q.z)), col = e => e < 0.2 ? 'var(--fit)' : e < 0.5 ? 'var(--warn)' : 'var(--accent)';
+    for (let i = 1; i < fitMeasure.pts.length; i++) {
+      const a = fitMeasure.pts[i - 1], b = fitMeasure.pts[i], e = Math.max(Math.abs(mr[i - 1] - a.r), Math.abs(mr[i] - b.r));
+      for (const sg of [1, -1]) meas += `<line x1="${(ax + sg * a.r).toFixed(2)}" y1="${(-(a.z + z0)).toFixed(2)}" x2="${(ax + sg * b.r).toFixed(2)}" y2="${(-(b.z + z0)).toFixed(2)}" stroke="${col(e)}" stroke-width="0.6" stroke-linecap="round"/>`;
+    }
   }
-  svg.innerHTML = g + img + body + bore + lens + discLine + axis + meas + dims + w;
+  let rl = '';
+  if (ruler) ruler.pts.forEach((q, i) => { rl += `<circle cx="${q.x}" cy="${q.y}" r="0.8" fill="none" stroke="var(--warn)" stroke-width="0.3"/><line x1="${q.x - 1.5}" y1="${q.y}" x2="${q.x + 1.5}" y2="${q.y}" stroke="var(--warn)" stroke-width="0.15"/><line x1="${q.x}" y1="${q.y - 1.5}" x2="${q.x}" y2="${q.y + 1.5}" stroke="var(--warn)" stroke-width="0.15"/>`; });
+  if (ruler && ruler.pts.length === 2) rl += `<line x1="${ruler.pts[0].x}" y1="${ruler.pts[0].y}" x2="${ruler.pts[1].x}" y2="${ruler.pts[1].y}" stroke="var(--warn)" stroke-width="0.25" stroke-dasharray="1 0.5"/>`;
+  svg.innerHTML = g + img + body + bore + lens + discLine + axis + meas + dims + w + rl + freeHandles(p);
 }
+
+function freeHandles(p) {
+  if (!p.free_body || !p.curve || p.curve.length !== FREE_N) return '';
+  const zs = freeZs(p);
+  return zs.map((z, i) => i === FREE_N - 1 ? '' : `<circle data-pt="${i}" cx="${p.curve[i].toFixed(2)}" cy="${(-z).toFixed(2)}" r="0.9" fill="var(--warn)" stroke="var(--panel)" stroke-width="0.25" style="cursor: ew-resize"/>`).join('');
+}
+let ptDrag = null, ptRaf = 0;
+function ptDragStart(e) {
+  const t = e.target.closest && e.target.closest('[data-pt]'); if (!t) return false;
+  // cópia nova: versões salvas e o desfazer não podem compartilhar o mesmo array
+  checkpoint(); P.curve = P.curve.slice(); ptDrag = +t.dataset.pt; svg.setPointerCapture(e.pointerId); return true;
+}
+svg.addEventListener('pointermove', e => {
+  if (ptDrag === null) return;
+  P.curve[ptDrag] = +Math.max(0.5, svgPoint(e).x).toFixed(2);
+  if (!ptRaf) ptRaf = requestAnimationFrame(() => { ptRaf = 0; update(); });
+});
+svg.addEventListener('pointerup', () => { if (ptDrag !== null) { ptDrag = null; update(); } });
+function setCurve(rs) { checkpoint(); P.curve = rs.map(r => +r.toFixed(2)); P.free_body = 1; syncFields(P); update(); }
+document.getElementById('freemodel').addEventListener('click', () => {
+  const q = { ...P, free_body: 0 }, pr = profile(q).pts;
+  setCurve(freeZs(P).map(z => radiusAt(pr, z)));
+});
+document.getElementById('freephoto').addEventListener('click', () => {
+  const m = avgList.length ? averageMeasure(avgList) : fitMeasure, t = document.getElementById('toast');
+  if (!m || !m.pts.length) { t.textContent = 'Sem contorno da foto: carregue a foto e acerte a detecção (área verde) antes.'; return; }
+  // medida com a base em 0: amostra o raio medido em cada altura dos pontos (média de ±0,5 mm)
+  const near = z => { const v = m.pts.filter(q => Math.abs(q.z - z) <= 0.5); return v.length ? v.reduce((s, q) => s + q.r, 0) / v.length : null; };
+  const rs = freeZs(P).map((z, i) => near(z) ?? (P.curve[i] || P.D / 2));
+  setCurve(rs); t.textContent = 'Contorno livre copiado da foto. Ajuste fino arrastando os pontos.';
+});
 
 /* ---------- STL (só baixa fora do visualizador do Claude, que bloqueia downloads) ---------- */
 function bodySolidProfile(p) {
@@ -654,15 +778,140 @@ function setTab(tab) {
   document.querySelector('.wrap').dataset.tab = tab;
   document.getElementById('tab-knob').setAttribute('aria-selected', tab === 'knob');
   document.getElementById('tab-emb').setAttribute('aria-selected', tab === 'emb');
+  document.getElementById('tab-cam').setAttribute('aria-selected', tab === 'cam');
+  if (tab !== 'cam' && typeof camStop === 'function' && cam.stream) camStop();
   try { localStorage.setItem('manopla-tab', tab); } catch (e) {}
   if (tab === 'emb') { buildEmb(); requestAnimationFrame(embResize); } else requestAnimationFrame(resize);
 }
 document.getElementById('tab-knob').addEventListener('click', () => setTab('knob'));
 document.getElementById('tab-emb').addEventListener('click', () => setTab('emb'));
+document.getElementById('tab-cam').addEventListener('click', () => setTab('cam'));
+
+/* ---------- aba Câmera: nível + análise ao vivo da imagem ---------- */
+const cam = { stream: null, timer: 0, roll: null, pitch: null, last: null };
+const camVideo = document.getElementById('camvideo'), camOver = document.getElementById('camover');
+function camMsg(t) { document.getElementById('cammsg').textContent = t; }
+async function camStart() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camMsg('Este navegador não dá acesso à câmera aqui. Abra o site no GitHub pelo celular.'); return; }
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    camVideo.srcObject = cam.stream; await camVideo.play();
+    document.getElementById('camshot').disabled = false; document.getElementById('camstart').textContent = 'Desligar câmera';
+    camMsg('Câmera ligada. Siga a checagem ao lado.');
+    clearInterval(cam.timer); cam.timer = setInterval(camAnalyze, 250);
+  } catch (e) { camMsg(OWN_URL ? 'Não deu para ligar a câmera: ' + (e.message || e.name) + '. Confira a permissão do navegador.' : 'Dentro do Claude a câmera é bloqueada. Abra o site no GitHub pelo celular.'); }
+}
+function camStop() {
+  clearInterval(cam.timer); if (cam.stream) cam.stream.getTracks().forEach(t => t.stop()); cam.stream = null;
+  camVideo.srcObject = null; document.getElementById('camshot').disabled = true; document.getElementById('camstart').textContent = 'Ligar câmera';
+}
+document.getElementById('camstart').addEventListener('click', () => cam.stream ? camStop() : camStart());
+// nível pela gravidade (acelerômetro): giro lateral e inclinação, com o celular em pé ou deitado
+function onMotion(e) {
+  const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+  let roll = Math.atan2(g.x, g.y) * 180 / Math.PI;           // 0 ou ±180 com o celular em pé
+  roll = ((roll + 45) % 90 + 90) % 90 - 45;                    // desvio do eixo mais próximo (em pé ou deitado)
+  const pitch = Math.atan2(g.z, Math.hypot(g.x, g.y)) * 180 / Math.PI;
+  cam.roll = cam.roll == null ? roll : cam.roll * 0.8 + roll * 0.2; cam.pitch = cam.pitch == null ? pitch : cam.pitch * 0.8 + pitch * 0.2;
+  document.getElementById('camroll').textContent = `↔ ${cam.roll.toFixed(1)}°`; document.getElementById('campitch').textContent = `↕ ${cam.pitch.toFixed(1)}°`;
+}
+document.getElementById('camlevel').addEventListener('click', async () => {
+  try { if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) { const r = await DeviceMotionEvent.requestPermission(); if (r !== 'granted') { camMsg('Sem permissão para o nível.'); return; } } } catch (e) {}
+  window.addEventListener('devicemotion', onMotion); document.getElementById('camlevel').disabled = true;
+  setTimeout(() => { if (cam.roll == null) camMsg('Este aparelho não mandou dados de nível (computador ou navegador sem sensor).'); }, 1500);
+});
+const camAna = document.createElement('canvas');
+function camAnalyze() {
+  const vw = camVideo.videoWidth, vh = camVideo.videoHeight; if (!vw) return;
+  const W = 220, H = Math.round(vh * W / vw); camAna.width = W; camAna.height = H;
+  const g = camAna.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1px)'; g.drawImage(camVideo, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, n = W * H;
+  const border = []; for (let x = 0; x < W; x++) border.push(x, (H - 1) * W + x); for (let y = 1; y < H - 1; y++) border.push(y * W, y * W + W - 1);
+  const med = ch => { const v = border.map(i => d[i * 4 + ch]).sort((a, b) => a - b); return v[v.length >> 1]; };
+  const ref = [med(0), med(1), med(2)], dref = i => Math.hypot(d[i * 4] - ref[0], d[i * 4 + 1] - ref[1], d[i * 4 + 2] - ref[2]);
+  const bd = border.map(dref).sort((a, b) => a - b), tol = Math.max(10, bd[Math.floor(bd.length * 0.8)] * 0.9) * (O.ov_sens || 1);
+  // mesmo bloqueio pelas bordas da aba Manopla (gradiente de luminância)
+  const lum = new Float32Array(n), grd = new Float32Array(n);
+  for (let i = 0; i < n; i++) lum[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; grd[i] = Math.abs(lum[i + 1] - lum[i - 1]) + Math.abs(lum[i + W] - lum[i - W]); }
+  const gs = []; for (let i = 0; i < n; i += 5) gs.push(grd[i]); gs.sort((a, b) => a - b);
+  const eThr = (O.ov_edge || 0) > 0 ? (gs[Math.floor(gs.length * 0.95)] || 1) * (1.6 - 1.4 * O.ov_edge) : Infinity;
+  const bg = new Uint8Array(n), st = [];
+  for (const i of border) if (dref(i) < tol) { bg[i] = 1; st.push(i); }
+  while (st.length) { const i = st.pop(), x = i % W; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < n && !bg[j] && Math.abs((j % W) - x) <= 1 && dref(j) < tol && grd[j] <= eThr) { bg[j] = 1; st.push(j); } }
+  // peça = mancha não-fundo que passa pelo centro (ou a maior)
+  const lab = new Int32Array(n).fill(-1), sizes = [];
+  for (let s0 = 0; s0 < n; s0++) { if (bg[s0] || lab[s0] >= 0) continue; const id = sizes.length; let c = 0; const q = [s0]; lab[s0] = id; while (q.length) { const i = q.pop(), x = i % W; c++; for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < n && !bg[j] && lab[j] < 0 && Math.abs((j % W) - x) <= 1) { lab[j] = id; q.push(j); } } sizes.push(c); }
+  const checks = [];
+  if (!sizes.length) { camDraw(null); camChecks([['bad', 'Não achei a peça', 'O fundo ocupa a imagem toda. Aproxime ou use um fundo que contraste.']]); return; }
+  const ctr = lab[(H >> 1) * W + (W >> 1)], big = sizes.indexOf(Math.max(...sizes)), pick = ctr >= 0 && sizes[ctr] > sizes[big] * 0.3 ? ctr : big;
+  let x0 = W, x1 = 0, y0 = H, y1 = 0, cr = 0, cg = 0, cb = 0, cnt = 0, touch = false, edgeSum = 0, edgeN = 0;
+  const rows = new Map();
+  for (let i = 0; i < n; i++) {
+    if (lab[i] !== pick) continue;
+    const x = i % W, y = (i / W) | 0; cnt++; cr += d[i * 4]; cg += d[i * 4 + 1]; cb += d[i * 4 + 2];
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    if (x === 0 || y === 0 || x === W - 1 || y === H - 1) touch = true;
+    const r = rows.get(y); if (r) { r[0] = Math.min(r[0], x); r[1] = Math.max(r[1], x); } else rows.set(y, [x, x]);
+    // nitidez: diferença de cor através da borda da silhueta
+    if (x > 1 && x < W - 2 && (bg[i - 1] || bg[i + 1])) { edgeSum += Math.hypot(d[(i - 2) * 4] - d[(i + 2) * 4], d[(i - 2) * 4 + 1] - d[(i + 2) * 4 + 1], d[(i - 2) * 4 + 2] - d[(i + 2) * 4 + 2]); edgeN++; }
+  }
+  const contrast = Math.hypot(cr / cnt - ref[0], cg / cnt - ref[1], cb / cnt - ref[2]);
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, fill = bh / H, cx = (x0 + x1) / 2 / W - 0.5;
+  // simetria: centro de cada linha vs. centro médio, relativo à largura
+  const ys = [...rows.keys()].filter(y => y > y0 + bh * 0.1 && y < y1 - bh * 0.1), cen = ys.map(y => (rows.get(y)[0] + rows.get(y)[1]) / 2);
+  const cm = cen.reduce((a, b) => a + b, 0) / Math.max(1, cen.length), sym = cen.reduce((a, c) => a + Math.abs(c - cm), 0) / Math.max(1, cen.length) / bw;
+  const sharp = edgeN ? edgeSum / edgeN / Math.max(20, contrast) : 0;
+  const lvl = v => v == null ? null : Math.abs(v);
+  const roll = lvl(cam.roll), pitch = lvl(cam.pitch);
+  checks.push(roll == null ? ['', 'Nível lateral', 'Toque em "Ligar nível" (só no celular).'] : roll < 1 ? ['ok', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Reto.'] : roll < 3 ? ['warn', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Quase: gire o celular até zerar.'] : ['bad', `Nível lateral ${cam.roll.toFixed(1)}°`, 'Celular torto: a peça sai inclinada.']);
+  checks.push(pitch == null ? ['', 'Câmera na altura da peça', 'Precisa do nível ligado.'] : pitch < 2 ? ['ok', `Inclinação ${cam.pitch.toFixed(1)}°`, 'Câmera de frente para a peça.'] : pitch < 6 ? ['warn', `Inclinação ${cam.pitch.toFixed(1)}°`, 'Abaixe/levante o celular até a altura do meio da peça.'] : ['bad', `Inclinação ${cam.pitch.toFixed(1)}°`, 'Foto de cima/baixo achata a altura (a página corrige, mas melhor evitar).']);
+  checks.push(touch ? ['bad', 'Peça cortada', 'A peça (ou a sombra) encosta na borda. Afaste ou centralize.'] : ['ok', 'Peça inteira na imagem', '']);
+  checks.push(fill < 0.3 ? ['warn', `Peça pequena (${Math.round(fill * 100)}% da altura)`, 'Use zoom de 2–3x em vez de chegar perto.'] : fill > 0.85 ? ['warn', `Peça grande (${Math.round(fill * 100)}%)`, 'Deixe um pouco de fundo em volta.'] : ['ok', `Tamanho bom (${Math.round(fill * 100)}% da altura)`, '']);
+  checks.push(Math.abs(cx) < 0.06 ? ['ok', 'Centralizada', ''] : ['warn', 'Fora do centro', 'Centralizar na linha do meio reduz a distorção da lente.']);
+  checks.push(contrast > 60 ? ['ok', 'Contraste bom com o fundo', ''] : contrast > 30 ? ['warn', 'Contraste fraco', 'Fundo mais claro (papel branco) separa melhor a peça escura.'] : ['bad', 'Pouco contraste', 'Peça e fundo parecidos: a detecção vai falhar.']);
+  checks.push(sharp > 0.5 ? ['ok', 'Borda nítida', ''] : sharp > 0.3 ? ['warn', 'Borda meio borrada', 'Toque na peça para focar; mais luz ajuda.'] : ['bad', 'Imagem borrada', 'Segure firme, foque na peça.']);
+  checks.push(sym < 0.02 ? ['ok', 'Silhueta simétrica', ''] : sym < 0.05 ? ['warn', 'Silhueta um pouco torta', 'Peça inclinada ou reflexo comendo um lado.'] : ['bad', 'Silhueta torta', 'Endireite a peça ou tire o reflexo da borda.']);
+  camChecks(checks);
+  cam.last = { pick, lab, W, H, x0, x1, y0, y1 };
+  camDraw(cam.last);
+}
+function camChecks(list) {
+  document.getElementById('camchecks').innerHTML = list.map(([c, t, h]) => `<li class="${c}"><span>${t}${h ? `<small>${h}</small>` : ''}</span></li>`).join('');
+}
+function camDraw(a) {
+  const r = camOver.getBoundingClientRect(); camOver.width = r.width * devicePixelRatio; camOver.height = r.height * devicePixelRatio;
+  const g = camOver.getContext('2d'), vw = camVideo.videoWidth || 1, vh = camVideo.videoHeight || 1;
+  // área onde o vídeo aparece (object-fit: contain)
+  const s = Math.min(camOver.width / vw, camOver.height / vh), ox = (camOver.width - vw * s) / 2, oy = (camOver.height - vh * s) / 2, VW = vw * s, VH = vh * s;
+  g.clearRect(0, 0, camOver.width, camOver.height); g.lineWidth = 1.5 * devicePixelRatio;
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.setLineDash([6, 6]);
+  g.beginPath(); g.moveTo(ox + VW / 2, oy); g.lineTo(ox + VW / 2, oy + VH); g.moveTo(ox, oy + VH / 2); g.lineTo(ox + VW, oy + VH / 2); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.strokeRect(ox + VW * 0.2, oy + VH * 0.15, VW * 0.6, VH * 0.7); g.setLineDash([]);
+  if (cam.roll != null) {   // linha do horizonte: verde quando nivelado
+    const ang = -cam.roll * Math.PI / 180, L = VW * 0.35, cx = ox + VW / 2, cy = oy + VH / 2;
+    g.strokeStyle = Math.abs(cam.roll) < 1 ? '#3fd29a' : '#e0a83a'; g.lineWidth = 3 * devicePixelRatio;
+    g.beginPath(); g.moveTo(cx - L * Math.cos(ang), cy - L * Math.sin(ang)); g.lineTo(cx + L * Math.cos(ang), cy + L * Math.sin(ang)); g.stroke();
+  }
+  if (!a) return;
+  const k = VW / a.W; g.fillStyle = 'rgba(63,210,154,.9)';
+  for (let y = 1; y < a.H - 1; y++) for (let x = 1; x < a.W - 1; x++) { const i = y * a.W + x; if (a.lab[i] === a.pick && (a.lab[i - 1] !== a.pick || a.lab[i + 1] !== a.pick || a.lab[i - a.W] !== a.pick || a.lab[i + a.W] !== a.pick)) g.fillRect(ox + x * k - k / 2, oy + y * k - k / 2, Math.max(2, k * 0.8), Math.max(2, k * 0.8)); }
+}
+document.getElementById('camshot').addEventListener('click', () => {
+  const vw = camVideo.videoWidth, vh = camVideo.videoHeight; if (!vw) return;
+  const c = document.createElement('canvas'); c.width = vw; c.height = vh; c.getContext('2d').drawImage(camVideo, 0, 0);
+  const tilt = cam.pitch != null ? Math.abs(cam.pitch) : null;
+  loadPhotoURL(c.toDataURL('image/jpeg', 0.92), tilt);
+  camStop(); setTab('knob');
+  document.getElementById('toast').textContent = 'Foto da câmera carregada' + (tilt != null ? `, com ${tilt.toFixed(1)}° de inclinação corrigida.` : '.');
+});
 
 /* ---------- saída ---------- */
 const pad = (k) => k.padEnd(14);
-function scadBlock(p) { return Object.keys(DEFAULTS).map(k => `${pad(k)} = ${p[k]};`).join('\n'); }
+function scadBlock(p) {
+  const fp = p.free_body && p.curve && p.curve.length === FREE_N ? freeSpline(p).map(([r, z]) => `[${r.toFixed(3)}, ${z.toFixed(3)}]`).join(', ') : '';
+  return Object.keys(DEFAULTS).map(k => `${pad(k)} = ${p[k]};`).join('\n') + `\n${pad('free_pts')} = [${fp}];`;
+}
 function update() {
   build3D(P); drawProfile(P);
   if (document.querySelector('.wrap').dataset.tab === 'emb') buildEmb();
@@ -717,25 +966,25 @@ document.getElementById('reset').addEventListener('click', () => { checkpoint();
 const PHOTO_KEY = 'manopla-photo', OV_KEY = 'manopla-overlay';
 function saveOverlay() { try { localStorage.setItem(OV_KEY, JSON.stringify(O)); } catch (e) {} }
 function setPhoto(url, w, h) { photoURL = url; photoSize = [w, h]; drawProfile(P); }
-document.getElementById('photo').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
+// carrega uma foto (arquivo ou câmera) reduzida a 2000 px e a guarda neste navegador
+function loadPhotoURL(src, tilt) {
     const im = new Image();
     im.onload = () => {
       const k = Math.min(1, 2000 / Math.max(im.width, im.height));
       const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
       const url = c.toDataURL('image/jpeg', 0.85);
-      O.ov_scale = Math.min(1, (P.H * 2.2) / c.height); O.ov_y = P.H / 2; O.ov_v = 2; fitMeasure = null; syncFields(O); saveOverlay();
+      O.ov_scale = Math.min(1, (P.H * 2.2) / c.height); O.ov_x = 0; O.ov_y = P.H / 2; O.ov_v = 2; if (tilt != null) O.ov_tilt = Math.round(tilt * 2) / 2; fitMeasure = null; syncFields(O); saveOverlay();
       setPhoto(url, c.width, c.height); liveDetect();
       const t = document.getElementById('toast');
       try { localStorage.setItem(PHOTO_KEY, JSON.stringify({ url, w: c.width, h: c.height })); t.textContent = 'Foto salva neste navegador.'; }
       catch (err) { t.textContent = 'A foto não coube no armazenamento do navegador. Ela some ao recarregar.'; }
     };
-    im.src = rd.result;
-  };
-  rd.readAsDataURL(f);
+    im.src = src;
+}
+document.getElementById('photo').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader(); rd.onload = () => loadPhotoURL(rd.result); rd.readAsDataURL(f);
   e.target.value = '';
 });
 document.getElementById('clearphoto').addEventListener('click', () => {
@@ -753,13 +1002,15 @@ const LABEL = Object.fromEntries(SPEC.flatMap(([, items]) => items.map(([k, l]) 
 const RANGE = Object.fromEntries(SPEC.flatMap(([, items]) => items.map(([k, , mn, mx]) => [k, [mn, mx]])));
 
 // pixel da foto <-> mm do modelo (x = raio com sinal, z = altura)
+// foto tirada de cima/baixo achata a altura por cos(inclinação): a correção estica o vertical
+const tiltK = () => 1 / Math.cos((O.ov_tilt || 0) * Math.PI / 180);
 function photoToModel(px, py) {
-  const s = O.ov_scale, a = O.ov_rot * Math.PI / 180, dx = (px - photoSize[0] / 2) * s, dy = (py - photoSize[1] / 2) * s;
+  const s = O.ov_scale, a = O.ov_rot * Math.PI / 180, dx = (px - photoSize[0] / 2) * s, dy = (py - photoSize[1] / 2) * s * tiltK();
   return [O.ov_x + dx * Math.cos(a) - dy * Math.sin(a), O.ov_y - (dx * Math.sin(a) + dy * Math.cos(a))];
 }
 function modelToPhoto(x, z) {
   const s = O.ov_scale, a = O.ov_rot * Math.PI / 180, ux = x - O.ov_x, uy = -z + O.ov_y;
-  return [photoSize[0] / 2 + (ux * Math.cos(a) + uy * Math.sin(a)) / s, photoSize[1] / 2 + (-ux * Math.sin(a) + uy * Math.cos(a)) / s];
+  return [photoSize[0] / 2 + (ux * Math.cos(a) + uy * Math.sin(a)) / s, photoSize[1] / 2 + (-ux * Math.sin(a) + uy * Math.cos(a)) / s / tiltK()];
 }
 // separa a peça do fundo "enchendo" o fundo a partir das bordas da foto: brilhos e reflexos
 // dentro da peça não atrapalham, porque o preenchimento nunca começa lá dentro
@@ -826,7 +1077,14 @@ async function measurePhoto() {
   }
   const keys = [...bins.keys()].sort((a, b) => a - b), z0 = keys[0] * step, z1 = keys[keys.length - 1] * step;
   const centers = keys.map(b => (bins.get(b)[0] + bins.get(b)[1]) / 2).sort((a, b) => a - b), axis = centers[centers.length >> 1];
-  const pts = keys.filter(b => b * step > z0 + 0.6 && b * step < z1 - 0.6).map(b => ({ z: b * step - z0, r: (bins.get(b)[1] - bins.get(b)[0]) / 2 }));
+  // raio de cada lado medido a partir do eixo; o lado usado escolhe o mais confiável
+  const side = O.ov_side || 0;
+  const pts = keys.filter(b => b * step > z0 + 0.6 && b * step < z1 - 0.6).map(b => {
+    const [lo, hi] = bins.get(b), rl = axis - lo, rr = hi - axis;
+    const r = side === 1 ? rl : side === 2 ? rr : side === 3 ? Math.max(rl, rr) : (hi - lo) / 2;
+    return { z: b * step - z0, r, rl, rr };
+  });
+  const asym = pts.reduce((s, q) => s + Math.abs(q.rl - q.rr), 0) / Math.max(1, pts.length);
   // abaixo do ponto mais largo a manopla só afina: alargamentos ali são sombra ou apoio
   let iMax = 0; pts.forEach((q, i) => { if (q.r > pts[iMax].r) iMax = i; });
   for (let i = iMax - 1; i >= 0; i--) pts[i].r = Math.min(pts[i].r, pts[i + 1].r);
@@ -874,7 +1132,7 @@ async function measurePhoto() {
   const mg = mc.getContext('2d'), md = mg.createImageData(w, h);
   for (let i = 0; i < n; i++) if (lab[i] === pick) { md.data[i * 4] = 30; md.data[i * 4 + 1] = 210; md.data[i * 4 + 2] = 140; md.data[i * 4 + 3] = 255; }
   mg.putImageData(md, 0, 0);
-  return { pts, height: z1 - z0, axis, z0, touches, features, maskURL: mc.toDataURL() };
+  return { pts, height: z1 - z0, axis, z0, touches, features, asym, maskURL: mc.toDataURL() };
 }
 // raio externo do modelo em cada altura (maior raio entre os segmentos que cruzam z)
 function modelRadii(p, zs) { const pr = profile(p).pts; return zs.map(z => radiusAt(pr, z)); }
@@ -935,6 +1193,56 @@ function showFit(res, m) {
   box.querySelector('#fitapply').onclick = () => { checkpoint(); Object.assign(P, res.q); syncFields(P); update(); box.hidden = true; document.getElementById('toast').textContent = 'Sugestão aplicada. Ctrl+Z desfaz.'; };
   box.querySelector('#fitdrop').onclick = () => { box.hidden = true; };
 }
+const sideSel = document.getElementById('ovside');
+sideSel.value = String(O.ov_side || 0);
+sideSel.addEventListener('change', () => { O.ov_side = +sideSel.value; saveOverlay(); liveDetect(); });
+
+// escala por régua: dois cliques no perfil + distância real
+let ruler = null;  // { pts: [] } enquanto ativo
+function rulerUI() {
+  const box = document.getElementById('rulerbox'), n = ruler ? ruler.pts.length : 0;
+  box.hidden = !ruler;
+  document.getElementById('rulermsg').textContent = n < 2 ? `Clique no ${n ? 'segundo' : 'primeiro'} ponto da régua (ou da grade) na foto, no perfil. Use o zoom para mirar.` : `Distância na tela: ${Math.hypot(ruler.pts[1].x - ruler.pts[0].x, ruler.pts[1].y - ruler.pts[0].y).toFixed(2)} mm.`;
+  document.getElementById('rulerrow').hidden = n < 2; document.getElementById('rulerok').hidden = n < 2;
+  drawProfile(P);
+}
+document.getElementById('ruler').addEventListener('click', () => { if (!photoURL) { document.getElementById('toast').textContent = 'Carregue uma foto antes.'; return; } ruler = { pts: [] }; rulerUI(); });
+document.getElementById('rulercancel').addEventListener('click', () => { ruler = null; rulerUI(); });
+document.getElementById('rulerok').addEventListener('click', () => {
+  const [a, b] = ruler.pts, d = Math.hypot(b.x - a.x, b.y - a.y), real = parseFloat(document.getElementById('rulermm').value);
+  if (!(d > 0) || !(real > 0)) return;
+  // escala a foto em torno do primeiro ponto (em mm do modelo: x, z = -y do SVG)
+  const k = real / d, qx = a.x, qz = -a.y;
+  O.ov_scale *= k; O.ov_x = qx + (O.ov_x - qx) * k; O.ov_y = qz + (O.ov_y - qz) * k;
+  ruler = null; syncFields(O); saveOverlay(); rulerUI(); liveDetect();
+  document.getElementById('toast').textContent = `Escala ajustada pela régua (×${k.toFixed(3)}).`;
+});
+
+// média de várias fotos: cada medida entra com a base em 0, já na escala certa
+let avgList = [];
+function avgUI() {
+  document.getElementById('avgadd').disabled = !fitMeasure;
+  document.getElementById('avgclear').hidden = !avgList.length;
+  document.getElementById('avgclear').textContent = `Limpar média (${avgList.length})`;
+  if (avgList.length) document.getElementById('avginfo').textContent = `Média com ${avgList.length} foto(s). O ajuste usa a média.`;
+}
+function averageMeasure(list) {
+  const step = 0.5, acc = new Map();
+  for (const m of list) for (const q of m.pts) { const b = Math.round(q.z / step), a = acc.get(b) || [0, 0, 0, 0]; a[0] += q.r; a[1] += q.rl; a[2] += q.rr; a[3]++; acc.set(b, a); }
+  const pts = [...acc.keys()].sort((a, b) => a - b).filter(b => acc.get(b)[3] >= Math.ceil(list.length / 2)).map(b => { const a = acc.get(b); return { z: b * step, r: a[0] / a[3], rl: a[1] / a[3], rr: a[2] / a[3] }; });
+  const mean = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  return { pts, height: mean(list.map(m => m.height)), axis: 0, z0: 0, touches: false, asym: mean(list.map(m => m.asym)),
+    features: { grooveZ: mean(list.map(m => m.features && m.features.grooveZ)), lensZ: mean(list.map(m => m.features && m.features.lensZ)) }, count: list.length };
+}
+document.getElementById('avgadd').addEventListener('click', async () => {
+  if (!photoURL) return;
+  const m = await measurePhoto();
+  // guarda já com a base em 0 (pts são relativos à base); o eixo não importa porque o raio é medido do próprio eixo
+  avgList.push({ pts: m.pts, height: m.height, features: m.features, asym: m.asym });
+  avgUI(); document.getElementById('toast').textContent = `Foto adicionada à média (${avgList.length}).`;
+});
+document.getElementById('avgclear').addEventListener('click', () => { avgList = []; avgUI(); document.getElementById('avginfo').textContent = 'Média limpa.'; });
+
 let detectTimer = 0, detectRun = 0;
 function liveDetect() {
   const info = document.getElementById('detinfo');
@@ -949,7 +1257,8 @@ function liveDetect() {
       info.textContent = `Contorno: ${m.height.toFixed(1)} mm de altura, Ø máx ${(2 * Math.max(...m.pts.map(q => q.r))).toFixed(1)} mm. `
         + (f.grooveZ != null ? `Friso a ${f.grooveZ.toFixed(1)} mm da base. ` : 'Friso não detectado. ')
         + (f.lensZ != null ? `Lente com ${(m.height - f.lensZ).toFixed(1)} mm. ` : 'Lente não detectada. ')
-        + (m.touches ? 'A peça encosta na borda da foto.' : '');
+        + `Diferença entre lados: ${m.asym.toFixed(2)} mm. ` + (m.touches ? 'A peça encosta na borda da foto.' : '');
+      avgUI();
     } catch (e) { if (id !== detectRun) return; fitMeasure = null; info.textContent = e.message; }
     drawProfile(P);
   }, 120);
@@ -971,6 +1280,7 @@ document.getElementById('fit').addEventListener('click', async () => {
     syncFields(O); saveOverlay();
     m = await measurePhoto();
     // com a lente na foto, corta a faixa de cima (espessura da lente) e mede só o corpo
+    if (avgList.length) m = averageMeasure(avgList.concat([{ pts: m.pts, height: m.height, features: m.features, asym: m.asym }]));
     const f = m.features || {}, useF = document.getElementById('usefeat').checked, fixed = {};
     const lensH = withLens && useF && f.lensZ != null ? Math.round((m.height - f.lensZ) * 4) / 4 : P.lens_h;
     if (withLens) { fixed.lens_h = lensH; const hb = m.height - lensH; m = { ...m, pts: m.pts.filter(q => q.z <= hb - 0.3), height: hb }; }
@@ -1027,6 +1337,6 @@ buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); 
 buildFields(document.getElementById('embfields'), EMB_SPEC, P, update);
 applyTheme(); resize(); update();
 liveDetect();
-try { if (localStorage.getItem('manopla-tab') === 'emb') setTab('emb'); } catch (e) {}
+try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam') setTab(tb); } catch (e) {}
 if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
 </script>
