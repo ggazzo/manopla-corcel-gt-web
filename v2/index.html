@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bancada da Manopla Corcel GT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <script type="module" crossorigin src="./assets/index-DEo3eXGm.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-HDtObFIM.css">
+</head>
+<body>
+  <div class="app" data-tab="knob">
+    <header>
+      <h1>Manopla <span>Corcel GT</span> <small>v2</small></h1>
+      <p>Medidas em mm. Mexa nos controles, use foto com o cartão de marcadores para medir sozinho, e baixe os arquivos de impressão.</p>
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="knob">Manopla</button>
+        <button role="tab" data-tab="cam">Câmera</button>
+        <button role="tab" data-tab="emb">Emblema</button>
+        <button role="tab" data-tab="kit">Kit de medição</button>
+      </nav>
+    </header>
+
+    <!-- aba Manopla -->
+    <aside class="panel controls pane-knob" id="knob-controls" aria-label="Medidas"></aside>
+    <section class="panel view pane-knob">
+      <h2>Peça <small>arraste para girar · role para zoom</small></h2>
+      <div class="three" id="knob-3d"></div>
+    </section>
+    <section class="panel view pane-knob vp">
+      <h2>Perfil em corte <span class="zoom"><small>roda = zoom, arraste = mover</small><button data-z="in" aria-label="Aproximar">+</button><button data-z="out" aria-label="Afastar">−</button><button data-z="fit">Ver tudo</button></span></h2>
+      <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
+    </section>
+
+    <!-- aba Câmera -->
+    <aside class="panel controls pane-cam" id="cam-controls" aria-label="Assistente de foto"></aside>
+    <section class="panel view wide pane-cam">
+      <h2>Câmera <small>guias: eixo, meio e área ideal</small></h2>
+      <div class="camstage"><video id="cam-video" playsinline autoplay muted></video><canvas id="cam-over"></canvas></div>
+    </section>
+
+    <!-- aba Emblema -->
+    <aside class="panel controls pane-emb" id="emb-controls" aria-label="Matriz do emblema"></aside>
+    <section class="panel view wide pane-emb">
+      <h2>Matriz de estampar <small>macho · fêmea · disco</small></h2>
+      <div class="three" id="emb-3d"></div>
+    </section>
+
+    <!-- aba Kit -->
+    <aside class="panel controls pane-kit" id="kit-controls" aria-label="Kit de medição"></aside>
+    <section class="panel view wide pane-kit">
+      <h2>Cartão de marcadores e suporte</h2>
+      <div class="kitview">
+        <div class="cardwrap" id="card-preview"></div>
+        <div class="three" id="kit-3d"></div>
+      </div>
+    </section>
+  </div>
+  <div id="print-area"></div>
+</body>
+</html>
