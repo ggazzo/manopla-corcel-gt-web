@@ -121,7 +121,9 @@ button:disabled { opacity: .45; cursor: default; }
         <button id="clearphoto">Tirar foto</button>
       </div>
       <div id="ovfields"></div>
-      <p class="hint">Use a foto tirada no gabarito milimetrado. Ajuste a escala até a grade da foto casar com a daqui e depois acerte o contorno.</p>
+      <p class="hint">1. Ajuste escala e posição pela grade. 2. Mexa em sensibilidade e bordas até a área verde cobrir só a peça. 3. Clique em Ajustar pela foto.</p>
+      <div class="row check"><label for="livedetect"><input type="checkbox" id="livedetect" checked> Mostrar contorno detectado em tempo real</label></div>
+      <p class="hint" id="detinfo"></p>
       <div class="btns"><button class="primary" id="fit" disabled>Ajustar pela foto</button></div>
       <div class="row check"><label for="fitscale"><input type="checkbox" id="fitscale"> Escalar a foto pela altura atual (use quando a altura foi medida com paquímetro)</label></div>
       <div class="row check"><label for="fitlens"><input type="checkbox" id="fitlens"> A lente aparece na foto (a altura da foto é a altura total)</label></div>
@@ -200,8 +202,8 @@ const EMB_SPEC = [
   ['Relevo', [['emb_raised', 'Faixas saltadas (desmarcado = afundadas)', 'bool'], ['emb_relief', 'Altura do relevo', 0.1, 1.5, 0.05], ['emb_draft', 'Inclinação da lateral (evita rasgar)', 0, 1, 0.05]]],
   ['Chapa e bloco', [['emb_sheet', 'Espessura da chapa (folga)', 0.1, 1, 0.05], ['emb_block', 'Altura do bloco', 3, 15, 0.5], ['emb_margin', 'Borda além do disco', 3, 15, 0.5]]],
 ];
-const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo (ajuste pela foto)', 0.3, 3, 0.05]];
-const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1 };
+const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
+const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
 function migrateO(o, H) { if (o.ov_v !== 2) { o.ov_y = (o.ov_y || 0) + H / 2; o.ov_v = 2; } return o; }
 
@@ -459,8 +461,10 @@ function drawProfile(p) {
   const w = warn.length ? `<text class="dim" x="${x0 + 2}" y="${y0 + 4}" style="font-size:3px">⚠ ${warn.join(' · ')}</text>` : '';
   let meas = '';
   if (fitMeasure) {
-    const R = fitMeasure.pts.map(q => `${(q.r).toFixed(2)},${(-q.z).toFixed(2)}`).join(' '), L = fitMeasure.pts.map(q => `${(-q.r).toFixed(2)},${(-q.z).toFixed(2)}`).join(' ');
-    meas = `<polyline points="${R}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/><polyline points="${L}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/>`;
+    const ax = fitMeasure.axis || 0, z0 = fitMeasure.z0 || 0;
+    const R = fitMeasure.pts.map(q => `${(ax + q.r).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' '), L = fitMeasure.pts.map(q => `${(ax - q.r).toFixed(2)},${(-(q.z + z0)).toFixed(2)}`).join(' ');
+    if (fitMeasure.maskURL && photoURL) { const iw = photoSize[0] * O.ov_scale, ih = photoSize[1] * O.ov_scale; meas += `<image href="${fitMeasure.maskURL}" x="${O.ov_x - iw / 2}" y="${-O.ov_y - ih / 2}" width="${iw}" height="${ih}" opacity="0.35" transform="rotate(${O.ov_rot} ${O.ov_x} ${-O.ov_y})" preserveAspectRatio="none"/>`; }
+    meas += `<polyline points="${R}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/><polyline points="${L}" fill="none" stroke="var(--fit)" stroke-width="0.45" stroke-dasharray="0.8 0.5"/>`;
   }
   svg.innerHTML = g + img + body + bore + lens + discLine + axis + meas + dims + w;
 }
@@ -696,7 +700,7 @@ document.getElementById('photo').addEventListener('change', e => {
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
       const url = c.toDataURL('image/jpeg', 0.85);
       O.ov_scale = Math.min(1, (P.H * 2.2) / c.height); O.ov_y = P.H / 2; O.ov_v = 2; fitMeasure = null; syncFields(O); saveOverlay();
-      setPhoto(url, c.width, c.height);
+      setPhoto(url, c.width, c.height); liveDetect();
       const t = document.getElementById('toast');
       try { localStorage.setItem(PHOTO_KEY, JSON.stringify({ url, w: c.width, h: c.height })); t.textContent = 'Foto salva neste navegador.'; }
       catch (err) { t.textContent = 'A foto não coube no armazenamento do navegador. Ela some ao recarregar.'; }
@@ -707,7 +711,7 @@ document.getElementById('photo').addEventListener('change', e => {
   e.target.value = '';
 });
 document.getElementById('clearphoto').addEventListener('click', () => {
-  photoURL = null; fitMeasure = null; document.getElementById('fitbox').hidden = true; drawProfile(P);
+  photoURL = null; fitMeasure = null; document.getElementById('fitbox').hidden = true; liveDetect();
   try { localStorage.removeItem(PHOTO_KEY); } catch (e) {}
 });
 try { Object.assign(O, JSON.parse(localStorage.getItem(OV_KEY) || '{}')); } catch (e) {}
@@ -731,12 +735,29 @@ function modelToPhoto(x, z) {
 }
 // separa a peça do fundo "enchendo" o fundo a partir das bordas da foto: brilhos e reflexos
 // dentro da peça não atrapalham, porque o preenchimento nunca começa lá dentro
-async function measurePhoto() {
+let photoCache = null;
+// pixels (com desfoque) e gradiente da foto, calculados uma vez por foto
+async function photoPixels() {
+  if (photoCache && photoCache.url === photoURL) return photoCache;
   const im = new Image(); im.src = photoURL; await im.decode();
   const k = Math.min(1, 700 / Math.max(photoSize[0], photoSize[1])), w = Math.round(photoSize[0] * k), h = Math.round(photoSize[1] * k), n = w * h;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d', { willReadFrequently: true }); g.filter = 'blur(1.5px)'; g.drawImage(im, 0, 0, w, h);
-  const d = g.getImageData(0, 0, w, h).data;
+  const d = g.getImageData(0, 0, w, h).data, lum = new Float32Array(n), grad = new Float32Array(n);
+  for (let i = 0; i < n; i++) lum[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, L = o => lum[i + o];
+    const gx = L(-w + 1) + 2 * L(1) + L(w + 1) - L(-w - 1) - 2 * L(-1) - L(w - 1), gy = L(w - 1) + 2 * L(w) + L(w + 1) - L(-w - 1) - 2 * L(-w) - L(-w + 1);
+    grad[i] = Math.hypot(gx, gy);
+  }
+  const sample = []; for (let i = 0; i < n; i += 7) sample.push(grad[i]); sample.sort((a, b) => a - b);
+  photoCache = { url: photoURL, k, w, h, n, d, grad, g95: sample[Math.floor(sample.length * 0.95)] || 1 };
+  return photoCache;
+}
+async function measurePhoto() {
+  const { k, w, h, n, d, grad, g95 } = await photoPixels();
+  // bordas fortes (contorno da peça) seguram o preenchimento do fundo
+  const edgeThr = O.ov_edge > 0 ? g95 * (1.6 - 1.4 * O.ov_edge) : Infinity;
   const dist = (i, j) => Math.hypot(d[i * 4] - d[j * 4], d[i * 4 + 1] - d[j * 4 + 1], d[i * 4 + 2] - d[j * 4 + 2]);
   const border = [];
   for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x);
@@ -751,7 +772,7 @@ async function measurePhoto() {
   while (stack.length) {
     const i = stack.pop(), x = i % w;
     for (const j of [i - 1, i + 1, i - w, i + w]) {
-      if (j < 0 || j >= n || bg[j] || Math.abs((j % w) - x) > 1) continue;
+      if (j < 0 || j >= n || bg[j] || Math.abs((j % w) - x) > 1 || grad[j] > edgeThr) continue;
       const dr = dref(j);
       if (dr < tol || (dist(i, j) < tol * 0.35 && dr < tol * 2.5)) { bg[j] = 1; stack.push(j); }
     }
@@ -783,7 +804,12 @@ async function measurePhoto() {
   for (let i = iMax - 1; i >= 0; i--) pts[i].r = Math.min(pts[i].r, pts[i + 1].r);
   let touches = false; for (let x = 0; x < w && !touches; x++) touches = lab[x] === pick || lab[(h - 1) * w + x] === pick;
   for (let y = 0; y < h && !touches; y++) touches = lab[y * w] === pick || lab[y * w + w - 1] === pick;
-  return { pts, height: z1 - z0, axis, z0, touches };
+  // máscara verde da peça detectada, desenhada por cima da foto
+  const mc = document.createElement('canvas'); mc.width = w; mc.height = h;
+  const mg = mc.getContext('2d'), md = mg.createImageData(w, h);
+  for (let i = 0; i < n; i++) if (lab[i] === pick) { md.data[i * 4] = 30; md.data[i * 4 + 1] = 210; md.data[i * 4 + 2] = 140; md.data[i * 4 + 3] = 255; }
+  mg.putImageData(md, 0, 0);
+  return { pts, height: z1 - z0, axis, z0, touches, maskURL: mc.toDataURL() };
 }
 // raio externo do modelo em cada altura (maior raio entre os segmentos que cruzam z)
 function modelRadii(p, zs) { const pr = profile(p).pts; return zs.map(z => radiusAt(pr, z)); }
@@ -843,6 +869,22 @@ function showFit(res, m) {
   box.querySelector('#fitapply').onclick = () => { checkpoint(); Object.assign(P, res.q); syncFields(P); update(); box.hidden = true; document.getElementById('toast').textContent = 'Sugestão aplicada. Ctrl+Z desfaz.'; };
   box.querySelector('#fitdrop').onclick = () => { box.hidden = true; };
 }
+let detectTimer = 0, detectRun = 0;
+function liveDetect() {
+  const info = document.getElementById('detinfo');
+  clearTimeout(detectTimer);
+  if (!photoURL || !document.getElementById('livedetect').checked) { fitMeasure = null; info.textContent = ''; drawProfile(P); return; }
+  detectTimer = setTimeout(async () => {
+    const id = ++detectRun;
+    try {
+      const m = await measurePhoto(); if (id !== detectRun) return;
+      fitMeasure = m;
+      info.textContent = `Contorno: ${m.height.toFixed(1)} mm de altura, Ø máx ${(2 * Math.max(...m.pts.map(q => q.r))).toFixed(1)} mm.` + (m.touches ? ' A peça encosta na borda da foto.' : '');
+    } catch (e) { if (id !== detectRun) return; fitMeasure = null; info.textContent = e.message; }
+    drawProfile(P);
+  }, 120);
+}
+document.getElementById('livedetect').addEventListener('change', liveDetect);
 document.getElementById('fit').addEventListener('click', async () => {
   const t = document.getElementById('toast'), btn = document.getElementById('fit');
   btn.disabled = true; btn.textContent = 'Analisando…';
@@ -908,9 +950,10 @@ renderVersions();
 
 buildFields(document.getElementById('fields'), SPEC, P, () => { linkState(); update(); });
 linkState();
-buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); });
+buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); liveDetect(); });
 buildFields(document.getElementById('embfields'), EMB_SPEC, P, update);
 applyTheme(); resize(); update();
+liveDetect();
 try { if (localStorage.getItem('manopla-tab') === 'emb') setTab('emb'); } catch (e) {}
 if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
 </script>
