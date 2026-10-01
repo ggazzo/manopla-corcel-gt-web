@@ -46,7 +46,10 @@ button:focus-visible, input:focus-visible, .file:focus-within { outline: 2px sol
 .view h2 small { font-family: var(--f-mono); text-transform: none; letter-spacing: 0; font-weight: 400; }
 #three { flex: 1; min-height: 360px; position: relative; }
 #three canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
-#profile { flex: 1; min-height: 360px; width: 100%; }
+#profile { flex: 1; min-height: 360px; width: 100%; cursor: grab; touch-action: none; }
+#profile.panning { cursor: grabbing; }
+.zoom { display: flex; gap: 4px; align-items: center; }
+.zoom button { padding: 2px 8px; font: 500 12px var(--f-mono); }
 .photoset { gap: 8px; }
 [hidden] { display: none !important; }
 .file input { display: none; }
@@ -158,7 +161,7 @@ button:disabled { opacity: .45; cursor: default; }
   </section>
 
   <section class="panel view vp knob-only">
-    <h2>Perfil em corte <small id="scaleinfo">grade 1 mm / 10 mm</small></h2>
+    <h2>Perfil em corte <span class="zoom"><small id="scaleinfo">grade 1 mm / 10 mm · roda = zoom, arraste = mover</small><button id="zin" aria-label="Aproximar">+</button><button id="zout" aria-label="Afastar">−</button><button id="zfit">Ver tudo</button></span></h2>
     <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
   </section>
 
@@ -420,12 +423,34 @@ new MutationObserver(() => { applyTheme(); drawProfile(P); }).observe(document.d
 
 /* ---------- perfil 2D ---------- */
 const svg = document.getElementById('profile');
+// zoom/arraste do perfil: só muda o viewBox, o desenho continua em mm
+let profBase = { x0: -40, y0: -70, W: 80, h: 80 }, pv = { z: 1, cx: null, cy: null };
+function applyView() {
+  const b = profBase; if (pv.cx === null || pv.z === 1) { pv.cx = b.x0 + b.W / 2; pv.cy = b.y0 + b.h / 2; }
+  const w = b.W / pv.z, h = b.h / pv.z;
+  svg.setAttribute('viewBox', `${pv.cx - w / 2} ${pv.cy - h / 2} ${w} ${h}`);
+}
+function svgPoint(ev) { const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+function zoomAt(f, p) {
+  const nz = Math.min(25, Math.max(1, pv.z * f)); if (nz === pv.z) return;
+  if (p) { pv.cx = p.x + (pv.cx - p.x) * pv.z / nz; pv.cy = p.y + (pv.cy - p.y) * pv.z / nz; }
+  pv.z = nz; applyView();
+}
+svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(Math.pow(1.0015, -e.deltaY), svgPoint(e)); }, { passive: false });
+let drag = null;
+svg.addEventListener('pointerdown', e => { drag = svgPoint(e); svg.setPointerCapture(e.pointerId); svg.classList.add('panning'); });
+svg.addEventListener('pointermove', e => { if (!drag || pv.z === 1) return; const p = svgPoint(e); pv.cx -= p.x - drag.x; pv.cy -= p.y - drag.y; applyView(); });
+svg.addEventListener('pointerup', () => { drag = null; svg.classList.remove('panning'); });
+svg.addEventListener('dblclick', () => { pv.z = 1; applyView(); });
+document.getElementById('zin').addEventListener('click', () => zoomAt(1.5));
+document.getElementById('zout').addEventListener('click', () => zoomAt(1 / 1.5));
+document.getElementById('zfit').addEventListener('click', () => { pv.z = 1; applyView(); });
 function drawProfile(p) {
   const fb = document.getElementById('fit'); if (fb && fb.textContent === 'Ajustar pela foto') fb.disabled = !photoURL;
   const { pts, Hb, R, Rb } = profile(p);
   const W = Math.ceil(Math.max(p.D, 40) / 2 + 22) * 2, top = p.H + 14, bottom = -10;
   const x0 = -W / 2, y0 = -top, h = top - bottom;
-  svg.setAttribute('viewBox', `${x0} ${y0} ${W} ${h}`);
+  profBase = { x0, y0, W, h }; applyView();
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   let g = '';
   for (let x = Math.ceil(x0); x <= x0 + W; x++) g += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + h}" stroke="var(--${x % 10 ? 'grid' : 'grid-strong'})" stroke-width="${x % 10 ? 0.08 : 0.18}"/>`;
