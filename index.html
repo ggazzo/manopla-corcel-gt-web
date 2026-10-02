@@ -212,11 +212,11 @@ button:disabled { opacity: .45; cursor: default; }
       <legend>Baixar STL</legend>
       <div class="btns">
         <button class="primary" id="stllente">Lente</button>
-        <button class="primary" id="stlcopo">Copo</button>
+        <button class="primary" id="stlcopo">Anel de metal</button>
         <button id="stlmatriz">Matriz do copo</button>
         <button id="stlpuncao">Punção</button>
       </div>
-      <p class="hint">Lente: matriz para o molde de silicone (ou impressa em resina transparente). Pinte pelo verso: preto, vermelho, branco. Copo: estampe alumínio com matriz + punção e dobre a borda por cima da lente.</p>
+      <p class="hint">Lente: matriz para o molde de silicone (ou impressa em resina transparente). Pinte pelo verso: preto, vermelho, branco. Anel: estampe um copo de alumínio com matriz + punção, fure o fundo no Ø da área visível (fica a aba de trás), encaixe a lente pela frente e cubra a borda com resina.</p>
       <div class="toast" id="embtoast" role="status"></div>
     </fieldset>
     <fieldset>
@@ -229,7 +229,7 @@ button:disabled { opacity: .45; cursor: default; }
   <section class="panel view emb-view emb-only">
     <h2>Emblema <small>arraste para girar · role para zoom</small></h2>
     <div id="embThree"></div>
-    <div class="legend"><span>Copo de metal</span><span>Lente com relevo no verso</span><span>Pintura (vista por trás)</span></div>
+    <div class="legend"><span>Anel de metal</span><span>Lente com relevo no verso</span><span>Pintura (vista por trás)</span></div>
   </section>
 
   <section class="panel controls cam-only" aria-label="Assistente de foto">
@@ -294,12 +294,12 @@ const SPEC = [
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
-  ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_taper', 'Inclinação da parede do copo (°)', 0, 30, 0.5], ['em_lip_flat', 'Bordinha reta do aro (encosta na lente)', 0, 5, 0.05]]],
-  ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_film', 'Resina sobre a borda externa do aro', 0.05, 2, 0.05], ['em_lens_edge', 'Espessura da lente na borda (sob o aro)', 0.5, 4, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Anel de metal', [['em_cup_od', 'Diâmetro externo do anel', 25, 60, 0.01], ['em_rim_h', 'Altura da parede (até a borda)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba de trás (no furo)', 0, 5, 0.05]]],
+  ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_film', 'Resina sobre a borda da parede', 0.05, 2, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/anel', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
-  ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo do verso', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Copo de metal', 'bool']]]];
+  ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo do verso', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Anel de metal', 'bool']]]];
 const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_tilt', 'Câmera inclinada (°): corrige o achatamento', 0, 30, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
 const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4, ov_tilt: 0, ov_side: 0 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
@@ -728,17 +728,17 @@ function exportSTL(which) {
 document.getElementById('stlbody').addEventListener('click', () => exportSTL('corpo'));
 document.getElementById('stllens').addEventListener('click', () => exportSTL('lente'));
 
-/* ---------- aba Emblema: copo de metal + lente com relevo no verso (igual ao emblema-lente.scad) ---------- */
+/* ---------- aba Emblema: anel de metal + lente com relevo no verso (igual ao emblema-lente.scad) ---------- */
+// o metal é um anel sem fundo: parede reta e, atrás, uma aba dobrada para dentro que segura a lente;
+// o verso pintado da lente aparece pelo furo da aba (Ø da área visível)
 function embDims(p) {
-  const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, lensR = cupR - p.em_rim_h * Math.tan((p.em_taper || 0) * Math.PI / 180) - p.em_sheet - p.em_gap;
-  const backing = p.em_rim_h - 2 * p.em_sheet - p.em_lens_edge;   // espaço entre fundo do copo e lente
-  const capH = p.emblem_h - p.em_sheet - backing - p.em_lens_edge; // quanto a frente sobe acima da borda
-  const sphR = capH > 0 ? (viewR * viewR + capH * capH) / (2 * capH) : 1e9;
-  // verso abaulado: calota de altura em_back sobre a área visível (lente vira uma casca curva)
-  const b = Math.max(0, Math.min(p.em_back || 0, capH + p.em_lens_edge - 0.3));
+  const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, s = p.em_sheet, lensR = cupR - s - p.em_gap;
+  const zBack = s;                                                 // a lente apoia na aba
+  const capH = p.emblem_h - p.em_rim_h - (p.em_over ? p.em_film : 0); // quanto a frente sobe acima da borda
+  const b = Math.max(0, Math.min(p.em_back || 0, p.emblem_h - zBack - 0.6));
   const backR = b > 0 ? (viewR * viewR + b * b) / (2 * b) : 1e9;
   const backZ = r => b > 0 && r < viewR ? Math.sqrt(Math.max(0, backR * backR - r * r)) - (backR - b) : 0;
-  return { cupR, viewR, lensR, backing, capH, sphR, zBack: p.em_sheet + backing, b, backZ };
+  return { cupR, viewR, lensR, capH, zBack, b, backZ };
 }
 // arte do relevo (diagrama, números, divisórias) num canvas: 100 unidades = área visível
 let inkCache = null;
@@ -821,34 +821,20 @@ function reliefGeometry(p) {
   if (e.b > 0) { for (let i = 0; i < pos.count; i++) pos.setY(i, pos.getY(i) + e.backZ(Math.hypot(pos.getX(i), pos.getZ(i)))); g.computeVertexNormals(); }
   return g;
 }
-// lente lisa por revolução: borda plana + calota na área visível
+// lente por revolução (coordenadas da lente: z = 0 no apoio sobre a aba)
 function lensProfileE(p) {
-  const e = embDims(p), n0 = 48, pts = [];
+  const e = embDims(p), rd = rimDims(p), n0 = 48, pts = [];
   for (let i = 0; i <= n0; i++) { const r = e.viewR * i / n0; pts.push([r, e.backZ(r)]); }  // verso, do centro para a borda
-  // borda da lente acompanha a curva de dentro da dobra do aro (com a folga), para não atravessar o metal
-  const rd = rimDims(p), ra = Math.max(0.05, rd.rc - rd.s - p.em_gap), cx = rd.rt - rd.rc, czL = p.em_rim_h - rd.rc - e.zBack;
-  const a0 = czL < 0 ? Math.asin(Math.min(1, -czL / ra)) : 0;
-  pts.push([cx + ra * Math.cos(a0), 0]);
-  if (czL > 0) pts.push([cx + ra, czL]);
-  for (let i = 1; i <= 12; i++) { const a = a0 + (Math.PI / 2 - a0) * i / 12; pts.push([cx + ra * Math.cos(a), Math.max(0, czL + ra * Math.sin(a))]); }
-  pts.push([e.viewR, p.em_lens_edge]);
-  if (p.em_over) {
-    // a resina sobe pela beirada de dentro do aro, passa por cima da borda de metal até a beirada
-    // externa e fecha num domo único até o topo
-    const H = p.em_rim_h - e.zBack, zc = H - rd.rc;               // em coordenadas da lente
-    const rimTop = r => r <= cx ? H : zc + Math.sqrt(Math.max(0, rd.rc * rd.rc - (r - cx) ** 2));
-    pts.push([e.viewR, H]);
-    const m = 16; for (let i = 1; i <= m; i++) { const r = e.viewR + (rd.rt - e.viewR) * i / m; pts.push([r, rimTop(r)]); }
-    // domo: calota da borda de dentro do aro (com a película de resina) até o topo; sobre o aro
-    // a resina vai afinando (menisco) até ficar só a película na beirada externa
-    const zE = zc + p.em_film, topZ = p.emblem_h - e.zBack, z0 = H + p.em_film, h = Math.max(0.05, topZ - z0), R = (e.viewR * e.viewR + h * h) / (2 * h);
-    const dome = r => topZ - R + Math.sqrt(Math.max(0, R * R - r * r));
-    const top = r => { if (r <= e.viewR) return dome(r); const t = (r - e.viewR) / (rd.rt - e.viewR), base = rimTop(r) + p.em_film; return base + Math.max(0, dome(r) - base) * (1 - t * t); };
-    pts.push([rd.rt, zE]);
-    for (let i = 1; i <= 96; i++) { const r = rd.rt * (1 - i / 96); pts.push([r, top(r)]); }
-    return pts;
-  }
-  const n = 64; for (let i = 1; i <= n; i++) { const r = e.viewR * (1 - i / n); pts.push([r, e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge]); }
+  // canto de trás acompanha a dobra da aba por dentro (com a folga), sobe rente à parede
+  const cx = rd.cx - p.em_gap, ri = rd.rc - rd.s;
+  pts.push([cx, 0]);
+  for (let i = 1; i <= 12; i++) { const a = -Math.PI / 2 + Math.PI / 2 * i / 12; pts.push([cx + ri * Math.cos(a), ri + ri * Math.sin(a)]); }
+  const H = p.em_rim_h - e.zBack, topZ = p.emblem_h - e.zBack;
+  pts.push([e.lensR, H]);
+  // frente: calota até o topo; com em_over a resina passa por cima da borda da parede até a beirada externa
+  const r0 = p.em_over ? e.cupR : e.lensR, z0 = H + (p.em_over ? p.em_film : 0), h = Math.max(0.05, topZ - z0), R = (r0 * r0 + h * h) / (2 * h);
+  if (p.em_over) pts.push([e.cupR, H]);
+  const n = 96; for (let i = 0; i <= n; i++) { const r = r0 * (1 - i / n); pts.push([r, topZ - R + Math.sqrt(Math.max(0, R * R - r * r))]); }
   return pts;
 }
 function lensTriangles(p) {
@@ -858,21 +844,19 @@ function lensTriangles(p) {
   const a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
   return a;
 }
-// aro dobrado visto de cima: largura total = topo da parede até a área visível; perto da lente
-// fica a bordinha reta (em_lip_flat), o resto é a curva da dobra (quarto de círculo)
+// aba de trás vista por baixo: largura total = parede até o furo; perto do furo fica a bordinha
+// reta (em_lip_flat), o resto é a curva da dobra (quarto de círculo)
 function rimDims(p) {
-  const e = embDims(p), s = p.em_sheet, rt = e.cupR - p.em_rim_h * Math.tan((p.em_taper || 0) * Math.PI / 180);
-  const full = rt - e.viewR, flat = Math.max(0, Math.min(p.em_lip_flat ?? 1, full - s - 0.05));
+  const e = embDims(p), s = p.em_sheet, full = e.cupR - e.viewR, flat = Math.max(0, Math.min(p.em_lip_flat ?? 1, full - s - 0.05));
   const rc = Math.max(s + 0.05, Math.min(full - flat, p.em_rim_h - s - 0.05));
-  return { rt, full, flat, rc, s };
+  return { full, flat, rc, s, cx: e.cupR - rc };
 }
 function cupProfile(p) {
-  const e = embDims(p), { rt, rc, s } = rimDims(p), H = p.em_rim_h, n = 12, out = [[0, 0], [e.cupR, 0]];
-  const cx = rt - rc, cz = H - rc;
-  for (let i = 0; i <= n; i++) { const a = Math.PI / 2 * i / n; out.push([cx + rc * Math.cos(a), cz + rc * Math.sin(a)]); }   // dobra por fora
-  out.push([e.viewR, H], [e.viewR, H - s]);
-  for (let i = n; i >= 0; i--) { const a = Math.PI / 2 * i / n; out.push([cx + (rc - s) * Math.cos(a), cz + (rc - s) * Math.sin(a)]); }  // por dentro
-  out.push([e.cupR - s, s], [0, s]);
+  const e = embDims(p), { rc, s, cx } = rimDims(p), H = p.em_rim_h, n = 12, out = [[e.viewR, 0]];
+  for (let i = 0; i <= n; i++) { const a = -Math.PI / 2 + Math.PI / 2 * i / n; out.push([cx + rc * Math.cos(a), rc + rc * Math.sin(a)]); }   // dobra por fora
+  out.push([e.cupR, H], [e.cupR - s, H]);
+  for (let i = n; i >= 0; i--) { const a = -Math.PI / 2 + Math.PI / 2 * i / n; out.push([cx + (rc - s) * Math.cos(a), rc + (rc - s) * Math.sin(a)]); }  // por dentro
+  out.push([e.viewR, s], [e.viewR, 0]);
   return out;
 }
 function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
@@ -932,12 +916,12 @@ function buildEmb() {
   embGroup = emblemGroup(P, { cup: matCup, lens: matLensE, relief: matRelief, paint: matPaint });
   embScene.add(embGroup); applyCut(); frameEmb();
   const warn = [];
-  // o relevo vai até ~96% do raio visível (divisórias das faixas): o espaço ali é a borda + o pouco que o verso já subiu
-  const room = e.backing + e.backZ(e.viewR * 0.96);
-  if (room < P.em_relief) warn.push(`perto da borda o relevo (${P.em_relief} mm) é maior que o espaço atrás da lente (${room.toFixed(2)} mm)`);
-  if (e.capH <= 0) warn.push('a altura total é menor que copo + lente: a frente ficaria plana');
+  // relevo que passa da aba de trás fica saltado para fora do anel
+  const out = P.em_relief - e.zBack - e.backZ(e.viewR * 0.96);
+  if (out > 0.01) warn.push(`perto da borda o relevo passa ${out.toFixed(2)} mm para fora da aba de trás`);
+  if (e.capH <= 0) warn.push('a altura total é menor que a parede: a frente ficaria plana');
   const rd = rimDims(P);
-  document.getElementById('embdisc').innerHTML = `Aro visto de cima: ${rd.full.toFixed(2)} mm de largura total, ${rd.flat.toFixed(2)} mm de bordinha reta. Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Emblema no topo); a manopla mostra este mesmo emblema. Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm, espaço atrás da lente ${e.backing.toFixed(2)} mm na borda, ${(e.backing + e.b).toFixed(2)} mm no centro; espessura no centro ${(p => p)(P.em_lens_edge + e.capH - e.b).toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
+  document.getElementById('embdisc').innerHTML = `Aba de trás (vista por baixo): ${rd.full.toFixed(2)} mm de largura total, ${rd.flat.toFixed(2)} mm de bordinha reta, dobra r=${rd.rc.toFixed(2)}. Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Emblema no topo); a manopla mostra este mesmo emblema. Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm acima da parede; espessura no centro ${(P.emblem_h - e.zBack - e.b).toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
 }
 function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; if (!w || !h) return; embRenderer.setSize(w, h, false); embCam.aspect = w / h; embCam.updateProjectionMatrix(); frameEmb(); }
 new ResizeObserver(embResize).observe(embHost);
@@ -972,7 +956,7 @@ function parseSTL(buf) {
 const PARTS = [
   ['Manopla', 'corpo', 'Corpo', () => latheTriangles(bodySolidProfile(P), 200).a],
   ['Emblema', 'lente', 'Lente com relevo no verso', () => { const a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; return a; }],
-  ['Emblema', 'copo', 'Copo de metal', () => latheTriangles(cupProfile(P), 200).a],
+  ['Emblema', 'copo', 'Anel de metal', () => latheTriangles(cupProfile(P), 200).a],
   ['Emblema', 'matriz', 'Matriz do copo', () => latheTriangles(dieProfile(P), 200).a],
   ['Emblema', 'puncao', 'Punção do copo', () => latheTriangles(punchProfile(P), 200).a],
   ['Medidor de perfil', 'stl/medidor/pinos.stl', 'Hastes (lote de 35)', null],
