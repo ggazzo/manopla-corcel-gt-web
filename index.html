@@ -685,7 +685,10 @@ function bodySolidProfile(p) {
   // rebaixo do tamanho do copo (+0,3 mm de folga), sem passar da borda do topo do corpo
   const rr = Math.min((p.em_cup_od + 0.3) / 2, p.lens_d / 2 - 0.2);
   const bh = Math.min(p.bore_h, Hb - 2), dep = Math.max(0.01, embedDepth(p));
-  return [[0, bh], [rb, bh], [rb, 0]].concat(pts.slice(1, -1).filter(([r, z]) => !(z <= 1e-9 && r < rb)), [[rr, Hb], [rr, Hb - dep], [0, Hb - dep]]);
+    // cavidade para o verso abaulado (e o relevo) que sai por baixo do anel
+  const e = embDims(p), z0 = Hb - dep + e.zBack - p.em_relief - 0.2, pocket = [];
+  for (let i = 0; i <= 24; i++) { const r = e.viewR * (1 - i / 24); pocket.push([r, Math.min(Hb - dep, z0 + e.backZ(r))]); }
+  return [[0, bh], [rb, bh], [rb, 0]].concat(pts.slice(1, -1).filter(([r, z]) => !(z <= 1e-9 && r < rb)), [[rr, Hb], [rr, Hb - dep]], pocket);
 }
 function latheTriangles(prof, seg) {
   let g = new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), seg).toNonIndexed();
@@ -735,9 +738,10 @@ function embDims(p) {
   const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, s = p.em_sheet, lensR = cupR - s - p.em_gap;
   const zBack = s;                                                 // a lente apoia na aba
   const capH = p.emblem_h - p.em_rim_h - (p.em_over ? p.em_film : 0); // quanto a frente sobe acima da borda
-  const b = Math.max(0, Math.min(p.em_back || 0, p.emblem_h - zBack - 0.6));
+  // verso abaulado para baixo: calota de altura em_back que sai pelo furo da aba
+  const b = Math.max(0, p.em_back || 0);
   const backR = b > 0 ? (viewR * viewR + b * b) / (2 * b) : 1e9;
-  const backZ = r => b > 0 && r < viewR ? Math.sqrt(Math.max(0, backR * backR - r * r)) - (backR - b) : 0;
+  const backZ = r => b > 0 && r < viewR ? -Math.sqrt(Math.max(0, backR * backR - r * r)) + (backR - b) : 0;
   return { cupR, viewR, lensR, capH, zBack, b, backZ };
 }
 // arte do relevo (diagrama, números, divisórias) num canvas: 100 unidades = área visível
@@ -916,12 +920,9 @@ function buildEmb() {
   embGroup = emblemGroup(P, { cup: matCup, lens: matLensE, relief: matRelief, paint: matPaint });
   embScene.add(embGroup); applyCut(); frameEmb();
   const warn = [];
-  // relevo que passa da aba de trás fica saltado para fora do anel
-  const out = P.em_relief - e.zBack - e.backZ(e.viewR * 0.96);
-  if (out > 0.01) warn.push(`perto da borda o relevo passa ${out.toFixed(2)} mm para fora da aba de trás`);
   if (e.capH <= 0) warn.push('a altura total é menor que a parede: a frente ficaria plana');
   const rd = rimDims(P);
-  document.getElementById('embdisc').innerHTML = `Aba de trás (vista por baixo): ${rd.full.toFixed(2)} mm de largura total, ${rd.flat.toFixed(2)} mm de bordinha reta, dobra r=${rd.rc.toFixed(2)}. Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Emblema no topo); a manopla mostra este mesmo emblema. Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm acima da parede; espessura no centro ${(P.emblem_h - e.zBack - e.b).toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
+  document.getElementById('embdisc').innerHTML = `Aba de trás (vista por baixo): ${rd.full.toFixed(2)} mm de largura total, ${rd.flat.toFixed(2)} mm de bordinha reta, dobra r=${rd.rc.toFixed(2)}. Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Emblema no topo); a manopla mostra este mesmo emblema. Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm acima da parede; espessura no centro ${(P.emblem_h - e.zBack + e.b).toFixed(2)} mm; o verso (com o relevo) desce ${(e.b + P.em_relief - e.zBack).toFixed(2)} mm abaixo da aba de trás, a manopla tem a cavidade para ele.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
 }
 function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; if (!w || !h) return; embRenderer.setSize(w, h, false); embCam.aspect = w / h; embCam.updateProjectionMatrix(); frameEmb(); }
 new ResizeObserver(embResize).observe(embHost);
