@@ -524,8 +524,8 @@ const matRing = new THREE.MeshStandardMaterial({ color: 0xd7dde2, metalness: 0.9
 const matDisc = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.7 });
 const knobEmbMats = {
   cup: new THREE.MeshStandardMaterial({ color: 0xd7dde2, metalness: 0.9, roughness: 0.22 }),
-  lens: new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.3, clearcoat: 1, depthWrite: false, side: THREE.DoubleSide }),
-  relief: new THREE.MeshPhysicalMaterial({ color: 0xdfeefa, roughness: 0.1, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+  lens: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.12, envMapIntensity: 0.5, depthWrite: false, side: THREE.DoubleSide }),
+  relief: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.025, envMapIntensity: 0.15, depthWrite: false, side: THREE.DoubleSide }),
   paint: new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.6, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
 };
 let part = new THREE.Group(); scene.add(part);
@@ -877,8 +877,9 @@ const embRim = new THREE.DirectionalLight(0xffffff, 0.5); embRim.position.set(60
 embScene.environment = studioEnv(embRenderer);
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
 const matCup = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide });
-const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
-const matRelief = new THREE.MeshPhysicalMaterial({ color: 0xdfeefa, roughness: 0.1, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+// resina cristal: quase sem véu, para a pintura do verso aparecer nítida pela frente
+const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.12, envMapIntensity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+const matRelief = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.025, envMapIntensity: 0.15, side: THREE.DoubleSide, depthWrite: false });
 const matPaint = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.6, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
 let embGroup = new THREE.Group(), embMoved = false; embScene.add(embGroup);
 embControls.addEventListener('start', () => { embMoved = true; });
