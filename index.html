@@ -876,8 +876,8 @@ function cupProfile(p, r1 = 0) {
   for (let i = nd; i >= 0; i--) { const r = r1 + (e.stepR - r1) * i / nd; out.push([r, H - s + e.backZ(r)]); }
   return out;
 }
-// faces do centro estampado em malha polar até a área visível: a chapa inteira sobe em_relief onde há desenho
-// (salta em cima, afunda embaixo); o anel externo coincide com o torno de STAMP_SEG lados
+// faces do centro estampado em malha polar até a área visível: o desenho salta em_relief na face de cima e o
+// verso fica liso, para o relevo ser sólido na impressão; o anel externo coincide com o torno de STAMP_SEG lados
 const STAMP_SEG = 720;
 // face: 'top' | 'bottom' | 'paint' (top + 0,02 com UV da pintura); rel = altura do desenho (0 = liso)
 function stampGeometry(p, face, rel) {
@@ -910,7 +910,7 @@ function stampGeometry(p, face, rel) {
 // disco com o centro estampado (as duas faces) para o STL
 function discTriangles(p) {
   const parts = [latheTriangles(cupProfile(p, embDims(p).viewR), STAMP_SEG).a];
-  for (const f of ['top', 'bottom']) parts.push(stampGeometry(p, f, p.em_relief).toNonIndexed().attributes.position.array);
+  for (const f of ['top', 'bottom']) parts.push(stampGeometry(p, f, f === 'top' ? p.em_relief : 0).toNonIndexed().attributes.position.array);
   const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; }
   return a;
 }
@@ -954,7 +954,7 @@ function emblemGroup(p, m) {
   grp.add(tag(new THREE.Mesh(new THREE.LatheGeometry(cupProfile(p, e.viewR).map(([r, z]) => new THREE.Vector2(r, z)), STAMP_SEG), m.cup), 'cup'));
   // centro estampado, liso quando "Relevo estampado" está desligado (applyCut refaz ao mudar)
   const rel = CUT.show_relief ? p.em_relief : 0; builtRelief = !!CUT.show_relief;
-  for (const f of ['top', 'bottom']) grp.add(tag(new THREE.Mesh(stampGeometry(p, f, rel), m.cup), 'cup'));
+  for (const f of ['top', 'bottom']) grp.add(tag(new THREE.Mesh(stampGeometry(p, f, f === 'top' ? rel : 0), m.cup), 'cup'));
   const lens = new THREE.Group(); lens.position.y = e.zBack;
   lens.add(tag(lathe(lensProfileE(p), m.lens), 'lens'));
   grp.add(lens);
