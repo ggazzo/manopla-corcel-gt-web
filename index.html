@@ -194,27 +194,30 @@ button:disabled { opacity: .45; cursor: default; }
     <svg id="profile" role="img" aria-label="Perfil da manopla com cotas"></svg>
   </section>
 
-  <section class="panel controls emb-only" aria-label="Matriz do emblema">
+  <section class="panel controls emb-only" aria-label="Emblema">
     <fieldset>
       <legend>Emblema</legend>
       <p class="hint" id="embdisc"></p>
     </fieldset>
+    <div id="cutfields"></div>
     <div id="embfields"></div>
     <fieldset>
       <legend>Baixar STL</legend>
       <div class="btns">
-        <button class="primary" id="stlmacho">Macho</button>
-        <button class="primary" id="stlfemea">Fêmea</button>
+        <button class="primary" id="stllente">Lente</button>
+        <button class="primary" id="stlcopo">Copo</button>
+        <button id="stlmatriz">Matriz do copo</button>
+        <button id="stlpuncao">Punção</button>
       </div>
-      <p class="hint">Prense uma chapa de alumínio de 0,2–0,3 mm entre as duas peças, na morsa. Imprima em resina, ou em PETG com 100% de preenchimento.</p>
+      <p class="hint">Lente: matriz para o molde de silicone (ou impressa em resina transparente). Pinte pelo verso: preto, vermelho, branco. Copo: estampe alumínio com matriz + punção e dobre a borda por cima da lente.</p>
       <div class="toast" id="embtoast" role="status"></div>
     </fieldset>
   </section>
 
   <section class="panel view emb-view emb-only">
-    <h2>Matriz de estampar <small>arraste para girar · role para zoom</small></h2>
+    <h2>Emblema <small>arraste para girar · role para zoom</small></h2>
     <div id="embThree"></div>
-    <div class="legend"><span>Macho</span><span>Fêmea</span><span>Chapa estampada</span></div>
+    <div class="legend"><span>Copo de metal</span><span>Lente com relevo no verso</span><span>Pintura (vista por trás)</span></div>
   </section>
 
   <section class="panel controls cam-only" aria-label="Assistente de foto">
@@ -247,7 +250,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -258,9 +261,11 @@ const SPEC = [
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
-  ['Relevo', [['emb_raised', 'Faixas saltadas (desmarcado = afundadas)', 'bool'], ['emb_relief', 'Altura do relevo', 0.1, 1.5, 0.05], ['emb_draft', 'Inclinação da lateral (evita rasgar)', 0, 1, 0.05]]],
-  ['Chapa e bloco', [['emb_sheet', 'Espessura da chapa (folga)', 0.1, 1, 0.05], ['emb_block', 'Altura do bloco', 3, 15, 0.5], ['emb_margin', 'Borda além do disco', 3, 15, 0.5]]],
+  ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05]]],
+  ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
+const CUT = { cut_on: 1, cut_pos: 0 };
+const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]]];
 const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_tilt', 'Câmera inclinada (°): corrige o achatamento', 0, 30, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
 const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4, ov_tilt: 0, ov_side: 0 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
@@ -668,101 +673,101 @@ function exportSTL(which) {
 document.getElementById('stlbody').addEventListener('click', () => exportSTL('corpo'));
 document.getElementById('stllens').addEventListener('click', () => exportSTL('lente'));
 
-/* ---------- aba Emblema: matriz macho/fêmea como mapa de alturas ---------- */
-// mesma geometria do matriz-emblema.scad; faixas em % do diâmetro, como no disco-corcel-gt.svg
-const EMB_STRIPES = [[-10.5, 21], [-16.6, 3.8], [12.8, 3.8]];
-function embGeo(p) {
-  const k = p.disc_d / 100, clip = 48 * k, D = p.disc_d + 2 * p.emb_margin;
-  const pins = [45, 135, 225, 315].map(a => [Math.cos(a * Math.PI / 180) * (D / 2 - p.emb_margin / 2), Math.sin(a * Math.PI / 180) * (D / 2 - p.emb_margin / 2)]);
-  return { k, clip, D, pins };
+/* ---------- aba Emblema: copo de metal + lente com relevo no verso (igual ao emblema-lente.scad) ---------- */
+function embDims(p) {
+  const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, lensR = cupR - p.em_sheet - p.em_gap;
+  const backing = p.em_rim_h - 2 * p.em_sheet - p.em_lens_edge;   // espaço entre fundo do copo e lente
+  const capH = p.emblem_h - p.em_sheet - backing - p.em_lens_edge; // quanto a frente sobe acima da borda
+  const sphR = capH > 0 ? (viewR * viewR + capH * capH) / (2 * capH) : 1e9;
+  return { cupR, viewR, lensR, backing, capH, sphR, zBack: p.em_sheet + backing };
 }
-// 0..1: quanto o ponto está "dentro" de uma faixa (1 no topo, rampa na lateral inclinada)
-function stripeF(p, g, x, y, grow) {
-  if (Math.hypot(x, y) > g.clip) return 0;
-  let f = 0;
-  for (const [s0, w] of EMB_STRIPES) {
-    const a = s0 * g.k - grow, b = (s0 + w) * g.k + grow;
-    const d = x < a ? a - x : x > b ? x - b : 0;
-    f = Math.max(f, d === 0 ? 1 : p.emb_draft > 0 && d < p.emb_draft ? 1 - d / p.emb_draft : 0);
-  }
-  return f;
+// arte do relevo (diagrama, números, divisórias) num canvas: 100 unidades = área visível
+let inkCache = null;
+function inkMap(p) {
+  const key = [p.em_ridges, p.em_ridge_w, p.disc_d].join('|');
+  if (inkCache && inkCache.key === key) return inkCache;
+  const N = 1400, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d'), u = N / 100; g.translate(N / 2, N / 2); g.scale(u, u); g.fillStyle = '#000';
+  g.lineCap = 'square'; g.lineWidth = 2.6; g.strokeStyle = '#000';
+  [[-37, -2, 29, -2], [-29, -11, -29, 10], [-37, -3.3, -37, 10], [29, -11, 29, 10]].forEach(([a, b, x, y]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); });
+  g.font = 'bold 9.7px Arial, Helvetica, sans-serif'; g.textAlign = 'center';
+  [['1', -29, -13.5], ['R', -37.5, 21], ['2', -28.5, 21], ['3', 29, -13.5], ['4', 29, 21]].forEach(([t, x, y]) => g.fillText(t, x, y));
+  if (p.em_ridges) { g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip(); const w = p.em_ridge_w / (p.disc_d / 100); for (const x of [-16.6, -12.8, -10.5, 10.5, 12.8, 16.6]) g.fillRect(x - w / 2, -50, w, 100); g.restore(); }
+  const d = g.getImageData(0, 0, N, N).data;
+  inkCache = { key, N, a: d };
+  return inkCache;
 }
-function embHeight(which, p, g, x, y) {
-  const B = p.emb_block, pin = q => Math.hypot(x - q[0], y - q[1]);
-  if (which === 'macho') {
-    if (g.pins.some(q => pin(q) <= 1.5)) return B + 4;
-    const f = stripeF(p, g, x, y, 0);
-    return p.emb_raised ? B + p.emb_relief * f : B - p.emb_relief * f;
-  }
-  if (which === 'femea') {
-    if (g.pins.some(q => pin(q) <= 1.65)) return B - 4.5;
-    let z = Math.hypot(x, y) <= (p.disc_d + 0.4) / 2 ? B - 0.3 : B;
-    if (z < B) {
-      if (p.emb_raised) z -= (p.emb_relief + p.emb_sheet) * stripeF(p, g, x, y, p.emb_sheet);
-      else z += Math.max(0.05, p.emb_relief - p.emb_sheet) * stripeF(p, g, x, y, -p.emb_sheet);
+function inkAt(p, x, y) {  // x, y em mm (frente da peça: y para cima)
+  const m = inkMap(p), s = m.N / p.disc_d, px = Math.round(x * s + m.N / 2), py = Math.round(-y * s + m.N / 2);
+  return px < 0 || py < 0 || px >= m.N || py >= m.N ? 0 : m.a[(py * m.N + px) * 4 + 3] > 127 ? 1 : 0;
+}
+// lente como sólido polar: frente = calota, verso = plano com o relevo descendo; triângulos em coordenadas do three (Y para cima)
+function lensTriangles(p, dr) {
+  const e = embDims(p), K = Math.max(2, Math.ceil(e.lensR / dr)), A = Math.max(48, Math.ceil(2 * Math.PI * e.lensR / dr));
+  const top = r => r <= e.viewR && e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge;
+  const T = [], Bm = [];
+  for (let k = 0; k <= K; k++) {
+    const r = e.lensR * k / K, rowT = [], rowB = [];
+    for (let j = 0; j < A; j++) {
+      const t = 2 * Math.PI * j / A, x = r * Math.cos(t), y = r * Math.sin(t);
+      rowT.push([x, top(r), -y]); rowB.push([x, r <= e.viewR ? -p.em_relief * inkAt(p, x, y) : 0, -y]);
     }
-    return z;
+    T.push(rowT); Bm.push(rowB);
   }
-  return (p.emb_raised ? 1 : -1) * p.emb_relief * stripeF(p, g, x, y, 0);  // chapa
-}
-// bloco quadrado fechado: topo pelo mapa de alturas + 4 paredes + fundo; triângulos em coordenadas do three (Y para cima)
-function heightBlock(hf, size, step) {
-  const n = Math.max(2, Math.round(size / step)), h = size / n, o = -size / 2, out = [];
-  const Z = []; for (let j = 0; j <= n; j++) { const row = []; for (let i = 0; i <= n; i++) row.push(hf(o + i * h, o + j * h)); Z.push(row); }
-  const P3 = (i, j, z) => [o + i * h, z, o + j * h];
-  const tri = (a, b, c) => out.push(...a, ...b, ...c);
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    const a = P3(i, j, Z[j][i]), b = P3(i + 1, j, Z[j][i + 1]), c = P3(i + 1, j + 1, Z[j + 1][i + 1]), d = P3(i, j + 1, Z[j + 1][i]);
-    tri(a, d, c); tri(a, c, b);
+  const out = [], tri = (a, b, c) => out.push(...a, ...b, ...c);
+  for (let k = 0; k < K; k++) for (let j = 0; j < A; j++) {
+    const j2 = (j + 1) % A;
+    tri(T[k][j], T[k + 1][j], T[k + 1][j2]); tri(T[k][j], T[k + 1][j2], T[k][j2]);
+    tri(Bm[k][j], Bm[k + 1][j2], Bm[k + 1][j]); tri(Bm[k][j], Bm[k][j2], Bm[k + 1][j2]);
   }
-  const edge = (pts) => { for (let t = 0; t < pts.length - 1; t++) { const [i1, j1] = pts[t], [i2, j2] = pts[t + 1]; const a = P3(i1, j1, Z[j1][i1]), b = P3(i2, j2, Z[j2][i2]), a0 = P3(i1, j1, 0), b0 = P3(i2, j2, 0); tri(a, b, b0); tri(a, b0, a0); } };
-  const S = [...Array(n + 1).keys()];
-  edge(S.map(i => [i, 0])); edge(S.map(j => [n, j])); edge(S.map(i => [n - i, n])); edge(S.map(j => [0, n - j]));
-  tri(P3(0, 0, 0), P3(n, 0, 0), P3(n, n, 0)); tri(P3(0, 0, 0), P3(n, n, 0), P3(0, n, 0));
+  for (let j = 0; j < A; j++) { const j2 = (j + 1) % A; tri(Bm[K][j], Bm[K][j2], T[K][j2]); tri(Bm[K][j], T[K][j2], T[K][j]); }
   const a = new Float32Array(out);
-  // orienta as faces para fora (volume positivo), como no STL da manopla
   let vol = 0; for (let t = 0; t < a.length; t += 9) vol += (a[t] * (a[t + 4] * a[t + 8] - a[t + 5] * a[t + 7]) - a[t + 1] * (a[t + 3] * a[t + 8] - a[t + 5] * a[t + 6]) + a[t + 2] * (a[t + 3] * a[t + 7] - a[t + 4] * a[t + 6])) / 6;
   if (vol < 0) for (let t = 0; t < a.length; t += 9) for (let q = 0; q < 3; q++) { const tmp = a[t + 3 + q]; a[t + 3 + q] = a[t + 6 + q]; a[t + 6 + q] = tmp; }
   return a;
 }
-// chapa: só a superfície de cima, com a arte do disco
-function sheetGeometry(p, g, step) {
-  const n = Math.round(p.disc_d / step), geo = new THREE.PlaneGeometry(p.disc_d, p.disc_d, n, n);
-  geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, embHeight('chapa', p, g, pos.getX(i), -pos.getZ(i)));
-  geo.computeVertexNormals(); return geo;
-}
+function cupProfile(p) { const e = embDims(p), s = p.em_sheet; return [[0, 0], [e.cupR, 0], [e.cupR, p.em_rim_h], [e.viewR, p.em_rim_h], [e.viewR, p.em_rim_h - s], [e.cupR - s, p.em_rim_h - s], [e.cupR - s, s], [0, s]]; }
+function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
+function punchProfile(p) { const e = embDims(p); return [[0, 0], [e.cupR - p.em_sheet - 0.05, 0], [e.cupR - p.em_sheet - 0.05, 15], [0, 15]]; }
 
 const embHost = document.getElementById('embThree');
 const embRenderer = new THREE.WebGLRenderer({ antialias: true });
-embRenderer.setPixelRatio(Math.min(devicePixelRatio, 2)); embHost.appendChild(embRenderer.domElement);
+embRenderer.setPixelRatio(Math.min(devicePixelRatio, 2)); embRenderer.localClippingEnabled = true; embHost.appendChild(embRenderer.domElement);
 const embScene = new THREE.Scene(), embCam = new THREE.PerspectiveCamera(30, 1, 1, 2000);
-embCam.position.set(0, 150, 150);
 const embControls = new THREE.OrbitControls(embCam, embRenderer.domElement); embControls.enableDamping = true;
 embScene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.8));
 const embKey = new THREE.DirectionalLight(0xffffff, 1.0); embKey.position.set(-60, 100, 40); embScene.add(embKey);
-const matDie = new THREE.MeshStandardMaterial({ color: 0x8f9aa2, roughness: 0.55, metalness: 0.1, flatShading: true });
-const matDie2 = new THREE.MeshStandardMaterial({ color: 0xc27a45, roughness: 0.55, metalness: 0.1, flatShading: true });
-const matSheet = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.4, metalness: 0.35, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-let embGroup = new THREE.Group(), embMoved = false, embWidth = 170; embScene.add(embGroup);
+const embRim = new THREE.DirectionalLight(0xffffff, 0.5); embRim.position.set(60, -40, -60); embScene.add(embRim);
+const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const matCup = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide });
+const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
+const matPaint = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.6, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+let embGroup = new THREE.Group(), embMoved = false; embScene.add(embGroup);
 embControls.addEventListener('start', () => { embMoved = true; });
-// enquadra as três peças pela largura do painel até o usuário girar a câmera
 function frameEmb() {
   if (embMoved) return;
-  const half = Math.tan(embCam.fov * Math.PI / 360), dist = Math.max(embWidth / 2 / (half * Math.max(embCam.aspect, 0.3)), 60) * 1.05;
-  embCam.position.set(0, dist * 0.72, dist * 0.7); embControls.target.set(0, 2, 0); embControls.update();
+  const W = P.em_cup_od * 1.6, half = Math.tan(embCam.fov * Math.PI / 360), dist = W / 2 / (half * Math.min(1, Math.max(embCam.aspect, 0.3)));
+  embCam.position.set(dist * 0.55, dist * 0.55, dist * 0.65); embControls.target.set(0, P.emblem_h / 2, 0); embControls.update();
+}
+function applyCut() {
+  const on = !!CUT.cut_on; cutPlane.constant = CUT.cut_pos;
+  for (const m of [matCup, matLensE, matPaint]) { m.clippingPlanes = on ? [cutPlane] : []; m.needsUpdate = true; }
 }
 function buildEmb() {
   embGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); embScene.remove(embGroup); embGroup = new THREE.Group();
-  const g = embGeo(P), step = Math.max(0.2, g.D / 180);
-  const mesh = (arr, mat) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(arr, 3)); geo.computeVertexNormals(); return new THREE.Mesh(geo, mat); };
-  const m = mesh(heightBlock((x, y) => embHeight('macho', P, g, x, y), g.D, step), matDie); m.position.x = -(g.D + 10);
-  const f = mesh(heightBlock((x, y) => embHeight('femea', P, g, x, y), g.D, step), matDie2);
-  const sh = new THREE.Mesh(sheetGeometry(P, g, Math.max(0.15, P.disc_d / 220)), matSheet); sh.position.set(g.D + 10, 2, 0);
-  embGroup.add(m, f, sh); embScene.add(embGroup);
-  embWidth = 3 * g.D + 20; frameEmb();
-  document.getElementById('embdisc').textContent = `Diâmetro do emblema: ${P.disc_d} mm (muda na aba Manopla, grupo Lente). Bloco: ${g.D.toFixed(1)} × ${g.D.toFixed(1)} mm.`;
+  const e = embDims(P);
+  const lathe = (prof, mat) => new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), 160), mat);
+  embGroup.add(lathe(cupProfile(P), matCup));
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(lensTriangles(P, 0.3), 3)); geo.computeVertexNormals();
+  const lens = new THREE.Mesh(geo, matLensE); lens.position.y = e.zBack; embGroup.add(lens);
+  // tinta: fica no verso da lente, logo abaixo do relevo
+  const paint = new THREE.Mesh(new THREE.CircleGeometry(e.viewR, 96), matPaint);
+  paint.rotation.x = -Math.PI / 2; paint.position.y = e.zBack - P.em_relief - 0.02; embGroup.add(paint);
+  embScene.add(embGroup); applyCut(); frameEmb();
+  const warn = [];
+  if (e.backing < P.em_relief) warn.push(`o relevo (${P.em_relief} mm) é maior que o espaço atrás da lente (${e.backing.toFixed(2)} mm)`);
+  if (e.capH <= 0) warn.push('a altura total é menor que copo + lente: a frente ficaria plana');
+  document.getElementById('embdisc').innerHTML = `Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Lente). Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm, espaço atrás da lente ${e.backing.toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
 }
 function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; if (!w || !h) return; embRenderer.setSize(w, h, false); embCam.aspect = w / h; embCam.updateProjectionMatrix(); frameEmb(); }
 new ResizeObserver(embResize).observe(embHost);
@@ -770,12 +775,13 @@ new ResizeObserver(embResize).observe(embHost);
 function exportEmb(which) {
   const t = document.getElementById('embtoast');
   if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a> (abre com estas medidas).'; return; }
-  const g = embGeo(P), a = heightBlock((x, y) => embHeight(which, P, g, x, y), g.D, 0.12);
+  let a;
+  if (which === 'lente') { a = lensTriangles(P, 0.15); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; }  // apoia o relevo em z = 0
+  else a = latheTriangles(which === 'copo' ? cupProfile(P) : which === 'matriz' ? dieProfile(P) : punchProfile(P), 200).a;
   download(stlBlob(a), `emblema-${which}.stl`);
-  t.textContent = `${which === 'macho' ? 'Macho' : 'Fêmea'} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
+  t.textContent = `${which[0].toUpperCase() + which.slice(1)} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
 }
-document.getElementById('stlmacho').addEventListener('click', () => exportEmb('macho'));
-document.getElementById('stlfemea').addEventListener('click', () => exportEmb('femea'));
+for (const w of ['lente', 'copo', 'matriz', 'puncao']) document.getElementById('stl' + w).addEventListener('click', () => exportEmb(w));
 function setTab(tab) {
   document.querySelector('.wrap').dataset.tab = tab;
   document.getElementById('tab-knob').setAttribute('aria-selected', tab === 'knob');
@@ -1367,6 +1373,7 @@ buildFields(document.getElementById('fields'), SPEC, P, () => { linkState(); upd
 linkState();
 buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); liveDetect(); });
 buildFields(document.getElementById('embfields'), EMB_SPEC, P, update);
+buildFields(document.getElementById('cutfields'), CUT_SPEC, CUT, applyCut);
 applyTheme(); resize(); update();
 liveDetect();
 try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam') setTab(tb); } catch (e) {}
