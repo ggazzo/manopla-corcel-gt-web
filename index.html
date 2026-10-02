@@ -84,8 +84,14 @@ button:disabled { opacity: .45; cursor: default; }
 .tabs { display: flex; gap: 4px; margin-left: auto; }
 .tabs button { font: 600 15px var(--f-display); text-transform: uppercase; letter-spacing: .08em; padding: 6px 14px; }
 .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.wrap[data-tab="knob"] .emb-only, .wrap[data-tab="emb"] .knob-only { display: none !important; }
-.wrap:not([data-tab="cam"]) .cam-only, .wrap[data-tab="cam"] .knob-only, .wrap[data-tab="cam"] .emb-only { display: none !important; }
+.wrap:not([data-tab="knob"]) .knob-only, .wrap:not([data-tab="emb"]) .emb-only, .wrap:not([data-tab="cam"]) .cam-only, .wrap:not([data-tab="parts"]) .parts-only { display: none !important; }
+.parts-view { grid-column: 2 / -1; }
+#partsThree { flex: 1; min-height: 420px; position: relative; }
+#partsThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.partlist { display: grid; gap: 4px; }
+.partlist label { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.partlist label:has(input:checked) { background: var(--bg); outline: 1px solid var(--accent); }
+.partlist .grp { font: 600 13px var(--f-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 6px; }
 .cam-view { grid-column: 2 / -1; }
 .camstage { position: relative; flex: 1; min-height: 420px; background: #000; overflow: hidden; }
 .camstage video, .camstage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -99,8 +105,8 @@ button:disabled { opacity: .45; cursor: default; }
 #embThree { flex: 1; min-height: 420px; position: relative; }
 #embThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .legend { display: flex; justify-content: space-around; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font: 12px var(--f-mono); }
-@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .cam-view { grid-column: 2; } }
-@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .cam-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .cam-view, .parts-view { grid-column: 2; } }
+@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .cam-view, .parts-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -112,6 +118,7 @@ button:disabled { opacity: .45; cursor: default; }
       <button role="tab" id="tab-knob" aria-selected="true">Manopla</button>
       <button role="tab" id="tab-emb" aria-selected="false">Emblema</button>
       <button role="tab" id="tab-cam" aria-selected="false">Câmera</button>
+      <button role="tab" id="tab-parts" aria-selected="false">Peças</button>
     </div>
   </header>
 
@@ -244,6 +251,27 @@ button:disabled { opacity: .45; cursor: default; }
   <section class="panel view cam-view cam-only">
     <h2>Câmera <small>guias: eixo, meio e área ideal</small></h2>
     <div class="camstage"><video id="camvideo" playsinline autoplay muted></video><canvas id="camover"></canvas></div>
+  </section>
+
+  <section class="panel controls parts-only" aria-label="Peças">
+    <fieldset>
+      <legend>Peças</legend>
+      <div class="partlist" id="partlist"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Vista</legend>
+      <div class="row check"><label for="pv_cut"><input type="checkbox" id="pv_cut"> Em corte (plano no meio)</label></div>
+      <div class="row check"><label for="pv_wire"><input type="checkbox" id="pv_wire"> Mostrar malha</label></div>
+      <p class="hint" id="partinfo"></p>
+      <div class="btns"><button class="primary" id="partdl">Baixar STL</button></div>
+      <div class="toast" id="parttoast" role="status"></div>
+      <p class="hint">As peças da manopla e do emblema saem das medidas atuais. Medidor e matriz de faixas são arquivos fixos.</p>
+    </fieldset>
+  </section>
+
+  <section class="panel view parts-view parts-only">
+    <h2><span id="parttitle">Peça</span> <small>arraste para girar · role para zoom</small></h2>
+    <div id="partsThree"></div>
   </section>
 </div>
 
@@ -500,7 +528,7 @@ function resize() {
   renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(host3);
-function applyTheme() { scene.background = new THREE.Color(themeBg()); if (typeof embScene !== 'undefined') embScene.background = new THREE.Color(themeBg()); }
+function applyTheme() { scene.background = new THREE.Color(themeBg()); if (typeof embScene !== 'undefined') embScene.background = new THREE.Color(themeBg()); if (typeof partsScene !== 'undefined') partsScene.background = new THREE.Color(themeBg()); }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); drawProfile(P); });
 new MutationObserver(() => { applyTheme(); drawProfile(P); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 (function loop() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
@@ -831,18 +859,103 @@ function exportEmb(which) {
   t.textContent = `${which[0].toUpperCase() + which.slice(1)} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
 }
 for (const w of ['lente', 'copo', 'matriz', 'puncao']) document.getElementById('stl' + w).addEventListener('click', () => exportEmb(w));
+/* ---------- aba Peças: visualizador de todos os STLs ---------- */
+// STL ASCII ou binário → triângulos em coordenadas do three (Z da impressora vira Y)
+function parseSTL(buf) {
+  const dv = new DataView(buf), n = buf.byteLength >= 84 ? dv.getUint32(80, true) : 0;
+  const out = [];
+  if (84 + n * 50 === buf.byteLength) {
+    for (let t = 0; t < n; t++) for (let v = 0; v < 3; v++) { const o = 84 + t * 50 + 12 + v * 12; out.push(dv.getFloat32(o, true), dv.getFloat32(o + 8, true), -dv.getFloat32(o + 4, true)); }
+  } else {
+    const txt = new TextDecoder().decode(buf), re = /vertex\s+(\S+)\s+(\S+)\s+(\S+)/g; let m;
+    while ((m = re.exec(txt))) out.push(+m[1], +m[3], -m[2]);
+  }
+  return new Float32Array(out);
+}
+const PARTS = [
+  ['Manopla', 'corpo', 'Corpo', () => latheTriangles(bodySolidProfile(P), 200).a],
+  ['Manopla', 'lentem', 'Lente / emblema (volume)', () => latheTriangles(lensProfile(P), 200).a],
+  ['Emblema', 'lente', 'Lente com relevo no verso', () => { const a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; return a; }],
+  ['Emblema', 'copo', 'Copo de metal', () => latheTriangles(cupProfile(P), 200).a],
+  ['Emblema', 'matriz', 'Matriz do copo', () => latheTriangles(dieProfile(P), 200).a],
+  ['Emblema', 'puncao', 'Punção do copo', () => latheTriangles(punchProfile(P), 200).a],
+  ['Medidor de perfil', 'stl/medidor/pinos.stl', 'Hastes (lote de 35)', null],
+  ['Medidor de perfil', 'stl/medidor/base.stl', 'Base', null],
+  ['Medidor de perfil', 'stl/medidor/tampa.stl', 'Tampa', null],
+  ['Matriz de faixas (antiga)', 'stl/matriz-emblema/macho.stl', 'Macho', null],
+  ['Matriz de faixas (antiga)', 'stl/matriz-emblema/femea.stl', 'Fêmea', null],
+];
+const partsHost = document.getElementById('partsThree');
+const partsRenderer = new THREE.WebGLRenderer({ antialias: true });
+partsRenderer.setPixelRatio(Math.min(devicePixelRatio, 2)); partsRenderer.localClippingEnabled = true; partsHost.appendChild(partsRenderer.domElement);
+const partsScene = new THREE.Scene(), partsCam = new THREE.PerspectiveCamera(30, 1, 0.5, 5000);
+const partsControls = new THREE.OrbitControls(partsCam, partsRenderer.domElement); partsControls.enableDamping = true;
+partsScene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.85));
+const pKey = new THREE.DirectionalLight(0xffffff, 0.9); pKey.position.set(-1, 2, 1.5); partsScene.add(pKey);
+const pRim = new THREE.DirectionalLight(0xffffff, 0.4); pRim.position.set(1, -0.5, -1); partsScene.add(pRim);
+const partCut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const matPart = new THREE.MeshStandardMaterial({ color: 0xb8c0c6, roughness: 0.45, metalness: 0.15, side: THREE.DoubleSide });
+const matWire = new THREE.MeshBasicMaterial({ color: 0x3fd29a, wireframe: true, transparent: true, opacity: 0.25 });
+let partMesh = null, partSel = 'corpo', partArr = null, staticCache = {};
+(function () {
+  let html = '', last = '';
+  for (const [grp, id, label] of PARTS) { if (grp !== last) { html += `<div class="grp">${grp}</div>`; last = grp; } html += `<label><input type="radio" name="part" value="${id}"${id === partSel ? ' checked' : ''}> ${label}</label>`; }
+  document.getElementById('partlist').innerHTML = html;
+  document.getElementById('partlist').addEventListener('change', e => { partSel = e.target.value; showPart(true); });
+})();
+async function partTriangles(id) {
+  const def = PARTS.find(p => p[1] === id); if (def[3]) return def[3]();
+  if (!staticCache[id]) { const r = await fetch(id); if (!r.ok) throw new Error('não encontrei ' + id); staticCache[id] = parseSTL(await r.arrayBuffer()); }
+  return staticCache[id];
+}
+async function showPart(reframe) {
+  const def = PARTS.find(p => p[1] === partSel), info = document.getElementById('partinfo');
+  document.getElementById('parttitle').textContent = `${def[0]}: ${def[2]}`;
+  let a; try { a = await partTriangles(partSel); } catch (e) { info.textContent = 'Não deu para carregar: ' + e.message; return; }
+  partArr = a;
+  if (partMesh) { partScene_remove(); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(a, 3)); geo.computeVertexNormals(); geo.computeBoundingBox();
+  const bb = geo.boundingBox, c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+  geo.translate(-c.x, -bb.min.y, -c.z);
+  partMesh = new THREE.Group();
+  partMesh.add(new THREE.Mesh(geo, matPart));
+  if (document.getElementById('pv_wire').checked) partMesh.add(new THREE.Mesh(geo, matWire));
+  partsScene.add(partMesh); applyPartCut();
+  let vol = 0; for (let t = 0; t < a.length; t += 9) vol += (a[t] * (a[t + 4] * a[t + 8] - a[t + 5] * a[t + 7]) - a[t + 1] * (a[t + 3] * a[t + 8] - a[t + 5] * a[t + 6]) + a[t + 2] * (a[t + 3] * a[t + 7] - a[t + 4] * a[t + 6])) / 6;
+  info.textContent = `${sz.x.toFixed(2)} × ${sz.z.toFixed(2)} × ${sz.y.toFixed(2)} mm (X × Y × altura) · ${(a.length / 9).toLocaleString('pt-BR')} triângulos · ${(Math.abs(vol) / 1000).toFixed(2)} cm³`;
+  if (reframe) { const r = Math.max(sz.x, sz.y, sz.z), d = r / Math.tan(partsCam.fov * Math.PI / 360) * 0.9; partsCam.position.set(d * 0.6, d * 0.55, d * 0.75); partsControls.target.set(0, sz.y / 2, 0); partsControls.update(); }
+}
+function partScene_remove() { partMesh.traverse(o => { if (o.geometry && o.geometry !== partMesh.children[0].geometry) o.geometry.dispose(); }); partMesh.children[0].geometry.dispose(); partsScene.remove(partMesh); }
+function applyPartCut() { const on = document.getElementById('pv_cut').checked; matPart.clippingPlanes = matWire.clippingPlanes = on ? [partCut] : []; matPart.needsUpdate = matWire.needsUpdate = true; }
+document.getElementById('pv_cut').addEventListener('change', applyPartCut);
+document.getElementById('pv_wire').addEventListener('change', () => showPart(false));
+document.getElementById('partdl').addEventListener('click', () => {
+  const t = document.getElementById('parttoast'), def = PARTS.find(p => p[1] === partSel);
+  if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a>.'; return; }
+  if (!partArr) return;
+  download(stlBlob(partArr), (def[3] ? `${def[0]}-${def[1]}` : def[1].split('/').pop()).toLowerCase().replace(/[^a-z0-9.\-]+/g, '-').replace(/(\.stl)?$/, '.stl'));
+  t.textContent = 'STL baixado.';
+});
+function partsResize() { const w = partsHost.clientWidth, h = partsHost.clientHeight; if (!w || !h) return; partsRenderer.setSize(w, h, false); partsCam.aspect = w / h; partsCam.updateProjectionMatrix(); }
+new ResizeObserver(partsResize).observe(partsHost);
+(function partsLoop() { if (partsHost.clientWidth) { partsControls.update(); partsRenderer.render(partsScene, partsCam); } requestAnimationFrame(partsLoop); })();
+
 function setTab(tab) {
   document.querySelector('.wrap').dataset.tab = tab;
   document.getElementById('tab-knob').setAttribute('aria-selected', tab === 'knob');
   document.getElementById('tab-emb').setAttribute('aria-selected', tab === 'emb');
   document.getElementById('tab-cam').setAttribute('aria-selected', tab === 'cam');
+  document.getElementById('tab-parts').setAttribute('aria-selected', tab === 'parts');
   if (tab !== 'cam' && typeof camStop === 'function' && cam.stream) camStop();
   try { localStorage.setItem('manopla-tab', tab); } catch (e) {}
-  if (tab === 'emb') { buildEmb(); requestAnimationFrame(embResize); } else requestAnimationFrame(resize);
+  if (tab === 'emb') { buildEmb(); requestAnimationFrame(embResize); }
+  else if (tab === 'parts') { requestAnimationFrame(() => { partsResize(); showPart(true); }); }
+  else requestAnimationFrame(resize);
 }
 document.getElementById('tab-knob').addEventListener('click', () => setTab('knob'));
 document.getElementById('tab-emb').addEventListener('click', () => setTab('emb'));
 document.getElementById('tab-cam').addEventListener('click', () => setTab('cam'));
+document.getElementById('tab-parts').addEventListener('click', () => setTab('parts'));
 
 /* ---------- aba Câmera: nível + análise ao vivo da imagem ---------- */
 const cam = { stream: null, timer: 0, roll: null, pitch: null, last: null };
@@ -990,6 +1103,7 @@ function scadBlock(p) {
 function update() {
   build3D(P); drawProfile(P);
   if (document.querySelector('.wrap').dataset.tab === 'emb') buildEmb();
+  if (document.querySelector('.wrap').dataset.tab === 'parts' && typeof showPart === 'function') showPart(false);
   document.getElementById('out').textContent = scadBlock(P);
   document.getElementById('link').value = shareLink();
   try { localStorage.setItem('manopla-params', JSON.stringify(P)); } catch (e) {}
@@ -1425,6 +1539,6 @@ buildFields(document.getElementById('embfields'), EMB_SPEC, P, update);
 buildFields(document.getElementById('cutfields'), CUT_SPEC, CUT, applyCut);
 applyTheme(); resize(); update();
 liveDetect();
-try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam') setTab(tb); } catch (e) {}
+try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam' || tb === 'parts') setTab(tb); } catch (e) {}
 if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
 </script>
