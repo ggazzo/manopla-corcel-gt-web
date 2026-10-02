@@ -490,6 +490,18 @@ controls.target.set(0, 28, 0); controls.enableDamping = true;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.9));
 const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(60, 120, 80); scene.add(key);
 const rim = new THREE.DirectionalLight(0xffffff, 0.6); rim.position.set(-80, 40, -60); scene.add(rim);
+// ambiente para reflexos: metal sem nada para refletir fica preto. Uma "sala" simples (claro em cima,
+// escuro embaixo, duas janelas) vira mapa de reflexo via PMREM
+function studioEnv(r) {
+  const env = new THREE.Scene(), geo = new THREE.SphereGeometry(50, 32, 16), col = [];
+  for (let i = 0; i < geo.attributes.position.count; i++) { const t = (geo.attributes.position.getY(i) / 50 + 1) / 2, v = 0.25 + 0.75 * t; col.push(v, v, v * 1.02); }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  env.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  for (const [x, y, z] of [[30, 20, 20], [-25, 25, -20]]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(25, 12), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })); w.position.set(x, y, z); w.lookAt(0, 0, 0); env.add(w); }
+  const pm = new THREE.PMREMGenerator(r), tex = pm.fromScene(env, 0.04).texture; pm.dispose();
+  return tex;
+}
+scene.environment = studioEnv(renderer);
 
 function discTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 512;
@@ -839,6 +851,7 @@ const embControls = new THREE.OrbitControls(embCam, embRenderer.domElement); emb
 embScene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.8));
 const embKey = new THREE.DirectionalLight(0xffffff, 1.0); embKey.position.set(-60, 100, 40); embScene.add(embKey);
 const embRim = new THREE.DirectionalLight(0xffffff, 0.5); embRim.position.set(60, -40, -60); embScene.add(embRim);
+embScene.environment = studioEnv(embRenderer);
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
 const matCup = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide });
 const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
@@ -932,6 +945,7 @@ const partsControls = new THREE.OrbitControls(partsCam, partsRenderer.domElement
 partsScene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.85));
 const pKey = new THREE.DirectionalLight(0xffffff, 0.9); pKey.position.set(-1, 2, 1.5); partsScene.add(pKey);
 const pRim = new THREE.DirectionalLight(0xffffff, 0.4); pRim.position.set(1, -0.5, -1); partsScene.add(pRim);
+partsScene.environment = studioEnv(partsRenderer);
 const partCut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
 const matPart = new THREE.MeshStandardMaterial({ color: 0xb8c0c6, roughness: 0.45, metalness: 0.15, side: THREE.DoubleSide });
 const matWire = new THREE.MeshBasicMaterial({ color: 0x3fd29a, wireframe: true, transparent: true, opacity: 0.25 });
