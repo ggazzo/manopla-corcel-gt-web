@@ -283,7 +283,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -295,7 +295,7 @@ const SPEC = [
 ];
 const EMB_SPEC = [
   ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_taper', 'Inclinação da parede do copo (°)', 0, 30, 0.5], ['em_lip_flat', 'Bordinha reta do aro (encosta na lente)', 0, 5, 0.05]]],
-  ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_film', 'Resina sobre a borda externa do aro', 0.05, 2, 0.05], ['em_lens_edge', 'Espessura da lente na borda (sob o aro)', 0.5, 4, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
@@ -832,6 +832,22 @@ function lensProfileE(p) {
   if (czL > 0) pts.push([cx + ra, czL]);
   for (let i = 1; i <= 12; i++) { const a = a0 + (Math.PI / 2 - a0) * i / 12; pts.push([cx + ra * Math.cos(a), Math.max(0, czL + ra * Math.sin(a))]); }
   pts.push([e.viewR, p.em_lens_edge]);
+  if (p.em_over) {
+    // a resina sobe pela beirada de dentro do aro, passa por cima da borda de metal até a beirada
+    // externa e fecha num domo único até o topo
+    const H = p.em_rim_h - e.zBack, zc = H - rd.rc;               // em coordenadas da lente
+    const rimTop = r => r <= cx ? H : zc + Math.sqrt(Math.max(0, rd.rc * rd.rc - (r - cx) ** 2));
+    pts.push([e.viewR, H]);
+    const m = 16; for (let i = 1; i <= m; i++) { const r = e.viewR + (rd.rt - e.viewR) * i / m; pts.push([r, rimTop(r)]); }
+    // domo: calota da borda de dentro do aro (com a película de resina) até o topo; sobre o aro
+    // a resina vai afinando (menisco) até ficar só a película na beirada externa
+    const zE = zc + p.em_film, topZ = p.emblem_h - e.zBack, z0 = H + p.em_film, h = Math.max(0.05, topZ - z0), R = (e.viewR * e.viewR + h * h) / (2 * h);
+    const dome = r => topZ - R + Math.sqrt(Math.max(0, R * R - r * r));
+    const top = r => { if (r <= e.viewR) return dome(r); const t = (r - e.viewR) / (rd.rt - e.viewR), base = rimTop(r) + p.em_film; return base + Math.max(0, dome(r) - base) * (1 - t * t); };
+    pts.push([rd.rt, zE]);
+    for (let i = 1; i <= 96; i++) { const r = rd.rt * (1 - i / 96); pts.push([r, top(r)]); }
+    return pts;
+  }
   const n = 64; for (let i = 1; i <= n; i++) { const r = e.viewR * (1 - i / n); pts.push([r, e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge]); }
   return pts;
 }
