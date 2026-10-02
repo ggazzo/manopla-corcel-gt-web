@@ -517,8 +517,11 @@ function build3D(p) {
   // mesmo sólido do STL: com o furo da base e o rebaixo do disco
   part.add(new THREE.Mesh(new THREE.LatheGeometry(bodySolidProfile(p).map(([r, z]) => new THREE.Vector2(r, z)), 160), matBody));
   const dr = Math.min(p.disc_d, p.lens_d) / 2;
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(dr, 96), matDisc);
-  disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI; disc.position.y = Hb - 1 + 0.05; part.add(disc);
+  // disco curvo: acompanha o abaulado da lente (calota de altura lens_dome sobre o disco)
+  const dg = new THREE.RingGeometry(0.001, dr, 96, 24); dg.rotateZ(Math.PI); dg.rotateX(-Math.PI / 2);
+  const hd = Math.max(0, p.lens_dome), Rd = hd > 0 ? (dr * dr + hd * hd) / (2 * hd) : 0, dpos = dg.attributes.position;
+  if (hd > 0) { for (let i = 0; i < dpos.count; i++) { const r = Math.hypot(dpos.getX(i), dpos.getZ(i)); dpos.setY(i, Math.sqrt(Math.max(0, Rd * Rd - r * r)) - (Rd - hd)); } dg.computeVertexNormals(); }
+  const disc = new THREE.Mesh(dg, matDisc); disc.position.y = Hb - 1 + 0.05; part.add(disc);
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(dr + 0.2, dr + 0.2, Math.min(2.5, p.lens_h * 0.6), 128, 1, true), matRing);
   ring.position.y = Hb - 1 + Math.min(2.5, p.lens_h * 0.6) / 2; part.add(ring);
   const lp = lensProfile(p).map(([r, z]) => new THREE.Vector2(r, z + Hb));
