@@ -1422,7 +1422,7 @@ function runFit(m, extra = [], fixed = {}) {
   return { q, keys: KEYS_.concat(Object.keys(fixed)), before: fitError({ ...P }, m), after: fitError(q, m) };
 }
 function showFit(res, m) {
-  const box = document.getElementById('fitbox'), keys = ['H', ...res.keys, 'lens_top_d'].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
+  const box = document.getElementById('fitbox'), keys = ['H', ...res.keys].filter(k => Math.abs(res.q[k] - P[k]) > 1e-9);
   const warnEdge = m.touches ? '<p>A peça encosta na borda da foto: a parte cortada não entra na medida.</p>' : '';
   const off = warnEdge + (document.getElementById('fitscale').checked ? `<p>Foto centralizada e escalada para ${(P.H - P.lens_h).toFixed(1)} mm de corpo.</p>` : '<p>Foto centralizada no eixo, com a base em 0.</p>') + (document.getElementById('fitlens').checked ? `<p>Os ${P.lens_h} mm de cima (lente) ficaram fora da medida do corpo.</p>` : '');
   box.innerHTML = `<p>Diferença média entre o contorno da foto (tracejado verde) e o modelo: <b>${res.before.toFixed(2)} mm</b> → <b class="up">${res.after.toFixed(2)} mm</b></p>${off}
