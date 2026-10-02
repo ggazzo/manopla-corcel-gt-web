@@ -865,22 +865,48 @@ function rimDimsRaw(p, cupR, viewR) {
 }
 function rimDims(p) { return rimDimsRaw(p, p.em_cup_od / 2, p.disc_d / 2); }
 // disco de alumínio inteiro: centro estampado abaulado (com o relevo), aba, dobra e saia
-function cupProfile(p) {
+// r1 > 0 deixa o centro aberto para a face de cima estampada (stampTopGeometry)
+function cupProfile(p, r1 = 0) {
   const e = embDims(p), { rc, s, cx, t, aE } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [], span = Math.PI / 2 - aE;
   const ri = rc - s, zi = H - rc - ri * Math.sin(t), rIn = cx + ri * Math.cos(t) + zi * Math.tan(t);  // pé da saia por dentro
-  for (let i = 0; i <= nd; i++) { const r = e.stepR * i / nd; out.push([r, H + e.backZ(r)]); }
+  for (let i = 0; i <= nd; i++) { const r = r1 + (e.stepR - r1) * i / nd; out.push([r, H + e.backZ(r)]); }
   for (let i = 0; i <= n; i++) { const a = Math.PI / 2 - span * i / n; out.push([cx + rc * Math.cos(a), H - rc + rc * Math.sin(a)]); }   // dobra por fora
   const zo = H - rc - rc * Math.sin(t); out.push([cx + rc * Math.cos(t) + zo * Math.tan(t), 0], [rIn, 0]);
   for (let i = n; i >= 0; i--) { const a = Math.PI / 2 - span * i / n; out.push([cx + ri * Math.cos(a), H - rc + ri * Math.sin(a)]); }  // por dentro
   for (let i = nd; i >= 0; i--) { const r = e.stepR * i / nd; out.push([r, H - s + e.backZ(r)]); }
   return out;
 }
-// disco + relevo estampado saltado por baixo
+// face de cima do centro estampado: malha polar até STAMP_R da área visível, com o desenho afundado em_relief
+// (a chapa é estampada: afunda em cima e salta embaixo); o anel externo coincide com o torno de STAMP_SEG lados
+const STAMP_R = 0.97, STAMP_SEG = 720;
+function stampTopGeometry(p) {
+  const e = embDims(p), ink = inkMap(p), N = ink.N, R1 = e.viewR * STAMP_R, nr = 320, k = p.disc_d / 100;
+  // máscara do desenho com interpolação bilinear (0..1), em coordenadas do three
+  const at = (px, py) => px < 0 || py < 0 || px >= N || py >= N ? 0 : ink.a[(py * N + px) * 4 + 3] / 255;
+  const mask = (x, z) => {
+    const fx = (x / k + 50) * N / 100 - 0.5, fy = (z / k + 50) * N / 100 - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+    return (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+  };
+  const pos = new Float32Array(((nr) * STAMP_SEG + 1) * 3), idx = [];
+  pos[1] = p.em_rim_h + e.backZ(0) - p.em_relief * mask(0, 0);
+  for (let i = 1; i <= nr; i++) {
+    const r = R1 * i / nr;
+    for (let j = 0; j < STAMP_SEG; j++) {
+      const ph = j / STAMP_SEG * Math.PI * 2, x = r * Math.sin(ph), z = r * Math.cos(ph), o = (1 + (i - 1) * STAMP_SEG + j) * 3;
+      pos[o] = x; pos[o + 2] = z; pos[o + 1] = p.em_rim_h + e.backZ(r) - (i < nr ? p.em_relief * mask(x, z) : 0);
+    }
+  }
+  const v = (i, j) => i === 0 ? 0 : 1 + (i - 1) * STAMP_SEG + (j % STAMP_SEG);
+  for (let j = 0; j < STAMP_SEG; j++) idx.push(0, v(1, j), v(1, j + 1));
+  for (let i = 1; i < nr; i++) for (let j = 0; j < STAMP_SEG; j++) idx.push(v(i, j), v(i + 1, j), v(i + 1, j + 1), v(i, j), v(i + 1, j + 1), v(i, j + 1));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+// disco + face de cima estampada + relevo saltado por baixo
 function discTriangles(p) {
-  const body = latheTriangles(cupProfile(p), 200).a;
-  if (!(p.em_relief > 0)) return body;
-  const g = reliefGeometry(p); g.translate(0, embDims(p).zBack - p.em_sheet, 0);
-  const rel = g.toNonIndexed().attributes.position.array, a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
+  const parts = [latheTriangles(cupProfile(p, embDims(p).viewR * STAMP_R), STAMP_SEG).a, stampTopGeometry(p).toNonIndexed().attributes.position.array];
+  if (p.em_relief > 0) { const g = reliefGeometry(p); g.translate(0, embDims(p).zBack - p.em_sheet, 0); parts.push(g.toNonIndexed().attributes.position.array); }
+  const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; }
   return a;
 }
 function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
@@ -918,7 +944,8 @@ function emblemGroup(p, m) {
   const e = embDims(p), grp = new THREE.Group();
   const lathe = (prof, mat) => new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), 160), mat);
   const tag = (o, k) => { o.userData.kind = k; return o; };
-  grp.add(tag(lathe(cupProfile(p), m.cup), 'cup'));
+  grp.add(tag(new THREE.Mesh(new THREE.LatheGeometry(cupProfile(p, e.viewR * STAMP_R).map(([r, z]) => new THREE.Vector2(r, z)), STAMP_SEG), m.cup), 'cup'));
+  grp.add(tag(new THREE.Mesh(stampTopGeometry(p), m.cup), 'cup'));
   const lens = new THREE.Group(); lens.position.y = e.zBack;
   lens.add(tag(lathe(lensProfileE(p), m.lens), 'lens'));
   grp.add(lens);
