@@ -294,7 +294,7 @@ const SPEC = [
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
-  ['Disco de alumínio', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1]]],
+  ['Disco de alumínio', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_taper', 'Inclinação da saia (°; + abre para baixo)', -30, 30, 0.5], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1]]],
   ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_lens_edge', 'Espessura da lente na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Resina na lateral da dobra', 0.05, 2, 0.05], ['em_back_par', 'Estampa paralela à frente da lente', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/anel', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
@@ -842,9 +842,10 @@ function lensProfileE(p) {
     // a resina cobre a dobra de cima da saia até a lateral, com a película em_film por fora
     const n = 12, F = p.em_film;
     pts.push([rd.cx, 0]);
-    for (let i = 1; i <= n; i++) { const a = Math.PI / 2 * (1 - i / n); pts.push([rd.cx + rd.rc * Math.cos(a), -rd.rc + rd.rc * Math.sin(a)]); }
+    const span = Math.PI / 2 - rd.aE;
+    for (let i = 1; i <= n; i++) { const a = Math.PI / 2 - span * i / n; pts.push([rd.cx + rd.rc * Math.cos(a), -rd.rc + rd.rc * Math.sin(a)]); }
     // espessura vai de em_lens_edge no topo da dobra até a película na lateral
-    for (let i = 0; i <= n; i++) { const a = Math.PI / 2 * i / n, t = F + (p.em_lens_edge - F) * Math.sin(a) ** 2; pts.push([rd.cx + (rd.rc + t) * Math.cos(a), -rd.rc + (rd.rc + t) * Math.sin(a)]); }
+    for (let i = 0; i <= n; i++) { const a = rd.aE + span * i / n, t = F + (p.em_lens_edge - F) * Math.sin(Math.PI / 2 * i / n) ** 2; pts.push([rd.cx + (rd.rc + t) * Math.cos(a), -rd.rc + (rd.rc + t) * Math.sin(a)]); }
   } else pts.push([e.lensR, 0]);
   // frente: calota da beirada (espessura em_lens_edge sobre a aba) até o topo
   const m = 96; for (let i = 0; i <= m; i++) { const r = e.r0 * (1 - i / m); pts.push([r, dome(r)]); }
@@ -855,17 +856,22 @@ function lensTriangles(p) { return latheTriangles(lensProfileE(p), 256).a; }
 // reta (em_lip_flat), o resto é a curva da dobra que desce para a saia
 function rimDimsRaw(p, cupR, viewR) {
   const s = p.em_sheet, full = cupR - viewR, flat = Math.max(0, Math.min(p.em_lip_flat ?? 1, full - s - 0.05));
-  const rc = Math.max(s + 0.05, Math.min(full - flat, p.em_rim_h - 0.05));
-  return { full, flat, rc, s, cx: cupR - rc };
+  // saia inclinada (em_taper > 0 abre para baixo): a dobra vai até o ângulo aE e segue reta até o pé;
+  // cupR é sempre o maior raio (o pé quando abre, o fim da dobra quando fecha)
+  const t = Math.max(-30, Math.min(30, p.em_taper || 0)) * Math.PI / 180, aE = -t;
+  const rc = Math.max(s + 0.05, Math.min(full - flat, (p.em_rim_h - 0.05) / (1 + Math.max(0, Math.sin(t)))));
+  const L = (p.em_rim_h - rc - rc * Math.sin(t)) / Math.cos(t), cx = cupR - rc * Math.cos(t) - Math.max(0, L * Math.sin(t));
+  return { full, flat, rc, s, cx, t, aE };
 }
 function rimDims(p) { return rimDimsRaw(p, p.em_cup_od / 2, p.disc_d / 2); }
 // disco de alumínio inteiro: centro estampado abaulado (com o relevo), aba, dobra e saia
 function cupProfile(p) {
-  const e = embDims(p), { rc, s, cx } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [];
+  const e = embDims(p), { rc, s, cx, t, aE } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [], span = Math.PI / 2 - aE;
+  const ri = rc - s, zi = H - rc - ri * Math.sin(t), rIn = cx + ri * Math.cos(t) + zi * Math.tan(t);  // pé da saia por dentro
   for (let i = 0; i <= nd; i++) { const r = e.stepR * i / nd; out.push([r, H + e.backZ(r)]); }
-  for (let i = 0; i <= n; i++) { const a = Math.PI / 2 * (1 - i / n); out.push([cx + rc * Math.cos(a), H - rc + rc * Math.sin(a)]); }   // dobra por fora
-  out.push([e.cupR, 0], [e.cupR - s, 0]);
-  for (let i = n; i >= 0; i--) { const a = Math.PI / 2 * (1 - i / n); out.push([cx + (rc - s) * Math.cos(a), H - rc + (rc - s) * Math.sin(a)]); }  // por dentro
+  for (let i = 0; i <= n; i++) { const a = Math.PI / 2 - span * i / n; out.push([cx + rc * Math.cos(a), H - rc + rc * Math.sin(a)]); }   // dobra por fora
+  const zo = H - rc - rc * Math.sin(t); out.push([cx + rc * Math.cos(t) + zo * Math.tan(t), 0], [rIn, 0]);
+  for (let i = n; i >= 0; i--) { const a = Math.PI / 2 - span * i / n; out.push([cx + ri * Math.cos(a), H - rc + ri * Math.sin(a)]); }  // por dentro
   for (let i = nd; i >= 0; i--) { const r = e.stepR * i / nd; out.push([r, H - s + e.backZ(r)]); }
   return out;
 }
