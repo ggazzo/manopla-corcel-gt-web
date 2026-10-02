@@ -219,6 +219,11 @@ button:disabled { opacity: .45; cursor: default; }
       <p class="hint">Lente: matriz para o molde de silicone (ou impressa em resina transparente). Pinte pelo verso: preto, vermelho, branco. Copo: estampe alumínio com matriz + punção e dobre a borda por cima da lente.</p>
       <div class="toast" id="embtoast" role="status"></div>
     </fieldset>
+    <fieldset>
+      <legend>Levar para a manopla</legend>
+      <div class="btns"><button id="emb2knob">Usar este emblema na manopla</button></div>
+      <p class="hint">Copia diâmetro do copo e abaulado da lente para a aba Manopla, para a lente de lá ter a mesma curva.</p>
+    </fieldset>
   </section>
 
   <section class="panel view emb-view emb-only">
@@ -278,7 +283,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 0.4, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -289,7 +294,7 @@ const SPEC = [
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
-  ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05]]],
+  ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_taper', 'Inclinação da parede do copo (°)', 0, 30, 0.5]]],
   ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0 };
@@ -703,7 +708,7 @@ document.getElementById('stllens').addEventListener('click', () => exportSTL('le
 
 /* ---------- aba Emblema: copo de metal + lente com relevo no verso (igual ao emblema-lente.scad) ---------- */
 function embDims(p) {
-  const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, lensR = cupR - p.em_sheet - p.em_gap;
+  const cupR = p.em_cup_od / 2, viewR = p.disc_d / 2, lensR = cupR - p.em_rim_h * Math.tan((p.em_taper || 0) * Math.PI / 180) - p.em_sheet - p.em_gap;
   const backing = p.em_rim_h - 2 * p.em_sheet - p.em_lens_edge;   // espaço entre fundo do copo e lente
   const capH = p.emblem_h - p.em_sheet - backing - p.em_lens_edge; // quanto a frente sobe acima da borda
   const sphR = capH > 0 ? (viewR * viewR + capH * capH) / (2 * capH) : 1e9;
@@ -800,7 +805,11 @@ function lensTriangles(p) {
   const a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
   return a;
 }
-function cupProfile(p) { const e = embDims(p), s = p.em_sheet; return [[0, 0], [e.cupR, 0], [e.cupR, p.em_rim_h], [e.viewR, p.em_rim_h], [e.viewR, p.em_rim_h - s], [e.cupR - s, p.em_rim_h - s], [e.cupR - s, s], [0, s]]; }
+function cupProfile(p) {
+  // parede inclinada: o topo do aro fica mais estreito que a base em rim_h·tan(inclinação)
+  const e = embDims(p), s = p.em_sheet, d = p.em_rim_h * Math.tan((p.em_taper || 0) * Math.PI / 180), rt = e.cupR - d;
+  return [[0, 0], [e.cupR, 0], [rt, p.em_rim_h], [e.viewR, p.em_rim_h], [e.viewR, p.em_rim_h - s], [rt - s, p.em_rim_h - s], [e.cupR - s, s], [0, s]];
+}
 function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
 function punchProfile(p) { const e = embDims(p); return [[0, 0], [e.cupR - p.em_sheet - 0.05, 0], [e.cupR - p.em_sheet - 0.05, 15], [0, 15]]; }
 
@@ -859,6 +868,14 @@ function exportEmb(which) {
   t.textContent = `${which[0].toUpperCase() + which.slice(1)} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
 }
 for (const w of ['lente', 'copo', 'matriz', 'puncao']) document.getElementById('stl' + w).addEventListener('click', () => exportEmb(w));
+document.getElementById('emb2knob').addEventListener('click', () => {
+  checkpoint();
+  const e = embDims(P);
+  P.lens_d = P.em_cup_od; P.lens_top_d = +(2 * (e.cupR - P.em_rim_h * Math.tan((P.em_taper || 0) * Math.PI / 180))).toFixed(2);
+  P.lens_dome = +(P.emblem_h - P.em_rim_h).toFixed(2);  // quanto a lente sobe acima do aro
+  syncFields(P); update();
+  document.getElementById('embtoast').textContent = `Manopla atualizada: lente Ø${P.lens_d}, topo Ø${P.lens_top_d}, abaulado ${P.lens_dome} mm. Ctrl+Z desfaz.`;
+});
 /* ---------- aba Peças: visualizador de todos os STLs ---------- */
 // STL ASCII ou binário → triângulos em coordenadas do three (Z da impressora vira Y)
 function parseSTL(buf) {
