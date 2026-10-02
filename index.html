@@ -697,33 +697,79 @@ function inkMap(p) {
   inkCache = { key, N, a: d };
   return inkCache;
 }
-function inkAt(p, x, y) {  // x, y em mm (frente da peça: y para cima)
-  const m = inkMap(p), s = m.N / p.disc_d, px = Math.round(x * s + m.N / 2), py = Math.round(-y * s + m.N / 2);
-  return px < 0 || py < 0 || px >= m.N || py >= m.N ? 0 : m.a[(py * m.N + px) * 4 + 3] > 127 ? 1 : 0;
-}
-// lente como sólido polar: frente = calota, verso = plano com o relevo descendo; triângulos em coordenadas do three (Y para cima)
-function lensTriangles(p, dr) {
-  const e = embDims(p), K = Math.max(2, Math.ceil(e.lensR / dr)), A = Math.max(48, Math.ceil(2 * Math.PI * e.lensR / dr));
-  const top = r => r <= e.viewR && e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge;
-  const T = [], Bm = [];
-  for (let k = 0; k <= K; k++) {
-    const r = e.lensR * k / K, rowT = [], rowB = [];
-    for (let j = 0; j < A; j++) {
-      const t = 2 * Math.PI * j / A, x = r * Math.cos(t), y = r * Math.sin(t);
-      rowT.push([x, top(r), -y]); rowB.push([x, r <= e.viewR ? -p.em_relief * inkAt(p, x, y) : 0, -y]);
+// contorno vetorial do relevo: marching squares no canvas (com interpolação), laços fechados em mm
+let reliefCache = null;
+function reliefLoops(p) {
+  const m = inkMap(p);
+  if (reliefCache && reliefCache.key === m.key) return reliefCache.loops;
+  const N = m.N, A = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? 0 : m.a[(y * N + x) * 4 + 3] / 255, T = 0.5;
+  const segs = new Map(), key = (x, y) => x.toFixed(3) + ',' + y.toFixed(3);
+  const add = (p1, p2) => { const k = key(...p1); (segs.get(k) || segs.set(k, []).get(k)).push(p2); };
+  const lerp = (a, b) => (T - a) / (b - a);
+  for (let y = -1; y < N; y++) for (let x = -1; x < N; x++) {
+    const v0 = A(x, y), v1 = A(x + 1, y), v2 = A(x + 1, y + 1), v3 = A(x, y + 1);
+    const c = (v0 > T) | ((v1 > T) << 1) | ((v2 > T) << 2) | ((v3 > T) << 3);
+    if (c === 0 || c === 15) continue;
+    const top = [x + lerp(v0, v1), y], right = [x + 1, y + lerp(v1, v2)], bot = [x + lerp(v3, v2), y + 1], left = [x, y + lerp(v0, v3)];
+    // segmentos orientados com a tinta sempre do mesmo lado
+    const S = { 1: [[left, top]], 2: [[top, right]], 3: [[left, right]], 4: [[right, bot]], 5: [[left, top], [right, bot]], 6: [[top, bot]], 7: [[left, bot]],
+                8: [[bot, left]], 9: [[bot, top]], 10: [[top, right], [bot, left]], 11: [[bot, right]], 12: [[right, left]], 13: [[right, top]], 14: [[top, left]] }[c];
+    for (const [p1, p2] of S) add(p1, p2);
+  }
+  const loops = [];
+  for (const [k0] of segs) {
+    let list = segs.get(k0); if (!list || !list.length) continue;
+    const loop = []; let cur = k0.split(',').map(Number);
+    for (let guard = 0; guard < 1e6; guard++) {
+      const kk = key(...cur), nx = segs.get(kk); if (!nx || !nx.length) break;
+      const n2 = nx.pop(); loop.push(cur); cur = n2; if (key(...cur) === k0) break;
     }
-    T.push(rowT); Bm.push(rowB);
+    if (loop.length > 4) loops.push(simplify(loop, 0.35));
   }
-  const out = [], tri = (a, b, c) => out.push(...a, ...b, ...c);
-  for (let k = 0; k < K; k++) for (let j = 0; j < A; j++) {
-    const j2 = (j + 1) % A;
-    tri(T[k][j], T[k + 1][j], T[k + 1][j2]); tri(T[k][j], T[k + 1][j2], T[k][j2]);
-    tri(Bm[k][j], Bm[k + 1][j2], Bm[k + 1][j]); tri(Bm[k][j], Bm[k][j2], Bm[k + 1][j2]);
-  }
-  for (let j = 0; j < A; j++) { const j2 = (j + 1) % A; tri(Bm[K][j], Bm[K][j2], T[K][j2]); tri(Bm[K][j], T[K][j2], T[K][j]); }
-  const a = new Float32Array(out);
-  let vol = 0; for (let t = 0; t < a.length; t += 9) vol += (a[t] * (a[t + 4] * a[t + 8] - a[t + 5] * a[t + 7]) - a[t + 1] * (a[t + 3] * a[t + 8] - a[t + 5] * a[t + 6]) + a[t + 2] * (a[t + 3] * a[t + 7] - a[t + 4] * a[t + 6])) / 6;
-  if (vol < 0) for (let t = 0; t < a.length; t += 9) for (let q = 0; q < 3; q++) { const tmp = a[t + 3 + q]; a[t + 3 + q] = a[t + 6 + q]; a[t + 6 + q] = tmp; }
+  const s = p.disc_d / N;
+  const mm = loops.map(l => l.map(([x, y]) => [(x - N / 2) * s, -(y - N / 2) * s]));
+  reliefCache = { key: m.key, loops: mm };
+  return mm;
+}
+function simplify(pts, eps) {  // Douglas-Peucker num laço fechado
+  if (pts.length < 8) return pts;
+  const dp = (a, b) => {
+    let md = 0, mi = -1; const [x1, y1] = pts[a], [x2, y2] = pts[b], L = Math.hypot(x2 - x1, y2 - y1) || 1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs((x2 - x1) * (y1 - pts[i][1]) - (x1 - pts[i][0]) * (y2 - y1)) / L; if (d > md) { md = d; mi = i; } }
+    return md > eps ? dp(a, mi).concat(dp(mi, b).slice(1)) : [pts[a], pts[b]];
+  };
+  const h = pts.length >> 1;
+  return dp(0, h).concat(dp(h, pts.length - 1).slice(1));
+}
+// formas do three: laço dentro de número ímpar de outros laços = furo (miolo do R, do 4...)
+function reliefShapes(p) {
+  const loops = reliefLoops(p), inside = (pt, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const depth = loops.map((l, i) => loops.reduce((n, o, j) => n + (j !== i && inside(l[0], o) ? 1 : 0), 0));
+  const shapes = [];
+  loops.forEach((l, i) => {
+    if (depth[i] % 2) return;
+    const sh = new THREE.Shape(l.map(([x, y]) => new THREE.Vector2(x, -y)));  // y invertido: três z = -y da frente, igual à pintura
+    loops.forEach((h, j) => { if (depth[j] === depth[i] + 1 && inside(h[0], l)) sh.holes.push(new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, -y)))); });
+    shapes.push(sh);
+  });
+  return shapes;
+}
+function reliefGeometry(p) {
+  const g = new THREE.ExtrudeGeometry(reliefShapes(p), { depth: p.em_relief + 0.02, bevelEnabled: false, curveSegments: 1 });
+  g.rotateX(Math.PI / 2); g.translate(0, 0.02, 0);  // desce do verso da lente, encostando 0,02 mm dentro dela
+  return g;
+}
+// lente lisa por revolução: borda plana + calota na área visível
+function lensProfileE(p) {
+  const e = embDims(p), pts = [[0, 0], [e.lensR, 0], [e.lensR, p.em_lens_edge], [e.viewR, p.em_lens_edge]];
+  const n = 64; for (let i = 1; i <= n; i++) { const r = e.viewR * (1 - i / n); pts.push([r, e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge]); }
+  return pts;
+}
+function lensTriangles(p) {
+  const body = latheTriangles(lensProfileE(p), 256).a;
+  if (!(p.em_relief > 0)) return body;
+  const rel = reliefGeometry(p).toNonIndexed().attributes.position.array;
+  const a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
   return a;
 }
 function cupProfile(p) { const e = embDims(p), s = p.em_sheet; return [[0, 0], [e.cupR, 0], [e.cupR, p.em_rim_h], [e.viewR, p.em_rim_h], [e.viewR, p.em_rim_h - s], [e.cupR - s, p.em_rim_h - s], [e.cupR - s, s], [0, s]]; }
@@ -741,6 +787,7 @@ const embRim = new THREE.DirectionalLight(0xffffff, 0.5); embRim.position.set(60
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
 const matCup = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide });
 const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.05, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false });
+const matRelief = new THREE.MeshPhysicalMaterial({ color: 0xdfeefa, roughness: 0.1, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
 const matPaint = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.6, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
 let embGroup = new THREE.Group(), embMoved = false; embScene.add(embGroup);
 embControls.addEventListener('start', () => { embMoved = true; });
@@ -751,15 +798,17 @@ function frameEmb() {
 }
 function applyCut() {
   const on = !!CUT.cut_on; cutPlane.constant = CUT.cut_pos;
-  for (const m of [matCup, matLensE, matPaint]) { m.clippingPlanes = on ? [cutPlane] : []; m.needsUpdate = true; }
+  for (const m of [matCup, matLensE, matPaint, matRelief]) { m.clippingPlanes = on ? [cutPlane] : []; m.needsUpdate = true; }
 }
 function buildEmb() {
   embGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); embScene.remove(embGroup); embGroup = new THREE.Group();
   const e = embDims(P);
   const lathe = (prof, mat) => new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), 160), mat);
   embGroup.add(lathe(cupProfile(P), matCup));
-  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(lensTriangles(P, 0.3), 3)); geo.computeVertexNormals();
-  const lens = new THREE.Mesh(geo, matLensE); lens.position.y = e.zBack; embGroup.add(lens);
+  const lens = new THREE.Group(); lens.position.y = e.zBack;
+  lens.add(lathe(lensProfileE(P), matLensE));
+  if (P.em_relief > 0) lens.add(new THREE.Mesh(reliefGeometry(P), matRelief));
+  embGroup.add(lens);
   // tinta: fica no verso da lente, logo abaixo do relevo
   const paint = new THREE.Mesh(new THREE.CircleGeometry(e.viewR, 96), matPaint);
   paint.rotation.x = -Math.PI / 2; paint.position.y = e.zBack - P.em_relief - 0.02; embGroup.add(paint);
@@ -776,7 +825,7 @@ function exportEmb(which) {
   const t = document.getElementById('embtoast');
   if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a> (abre com estas medidas).'; return; }
   let a;
-  if (which === 'lente') { a = lensTriangles(P, 0.15); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; }  // apoia o relevo em z = 0
+  if (which === 'lente') { a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; }  // apoia o relevo em z = 0
   else a = latheTriangles(which === 'copo' ? cupProfile(P) : which === 'matriz' ? dieProfile(P) : punchProfile(P), 200).a;
   download(stlBlob(a), `emblema-${which}.stl`);
   t.textContent = `${which[0].toUpperCase() + which.slice(1)} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
