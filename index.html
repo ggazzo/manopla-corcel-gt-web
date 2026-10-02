@@ -297,8 +297,9 @@ const EMB_SPEC = [
   ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_taper', 'Inclinação da parede do copo (°)', 0, 30, 0.5], ['em_lip_flat', 'Bordinha reta do aro (encosta na lente)', 0, 5, 0.05]]],
   ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
-const CUT = { cut_on: 1, cut_pos: 0 };
-const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]]];
+const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
+const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
+  ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo do verso', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Copo de metal', 'bool']]]];
 const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_tilt', 'Câmera inclinada (°): corrige o achatamento', 0, 30, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
 const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4, ov_tilt: 0, ov_side: 0 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
@@ -883,6 +884,7 @@ function frameEmb() {
   embCam.position.set(dist * 0.55, dist * 0.55, dist * 0.65); embControls.target.set(0, P.emblem_h / 2, 0); embControls.update();
 }
 function applyCut() {
+  showEmbParts(embGroup); if (typeof part !== 'undefined') showEmbParts(part);
   const on = !!CUT.cut_on; cutPlane.constant = CUT.cut_pos;
   for (const m of [matCup, matLensE, matPaint, matRelief]) { m.clippingPlanes = on ? [cutPlane] : []; m.needsUpdate = true; }
 }
@@ -890,16 +892,23 @@ function applyCut() {
 function emblemGroup(p, m) {
   const e = embDims(p), grp = new THREE.Group();
   const lathe = (prof, mat) => new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, z]) => new THREE.Vector2(r, z)), 160), mat);
-  grp.add(lathe(cupProfile(p), m.cup));
+  const tag = (o, k) => { o.userData.kind = k; return o; };
+  grp.add(tag(lathe(cupProfile(p), m.cup), 'cup'));
   const lens = new THREE.Group(); lens.position.y = e.zBack;
-  lens.add(lathe(lensProfileE(p), m.lens));
-  if (p.em_relief > 0) lens.add(new THREE.Mesh(reliefGeometry(p), m.relief));
+  lens.add(tag(lathe(lensProfileE(p), m.lens), 'lens'));
+  if (p.em_relief > 0) lens.add(tag(new THREE.Mesh(reliefGeometry(p), m.relief), 'relief'));
   grp.add(lens);
   // tinta: fica no verso da lente, logo abaixo do relevo, acompanhando a curva
   const pg = new THREE.RingGeometry(0.001, e.viewR, 96, 24); pg.rotateX(-Math.PI / 2);
   const pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) pp.setY(i, e.backZ(Math.hypot(pp.getX(i), pp.getZ(i))));
-  const paint = new THREE.Mesh(pg, m.paint); paint.position.y = e.zBack - p.em_relief - 0.02; grp.add(paint);
+  const paint = tag(new THREE.Mesh(pg, m.paint), 'paint'); paint.position.y = e.zBack - p.em_relief - 0.02; grp.add(paint);
+  showEmbParts(grp);
   return grp;
+}
+// liga/desliga cada parte do emblema (opções "Mostrar" da aba Emblema), nas duas abas
+function showEmbParts(grp) {
+  const on = { cup: CUT.show_cup, lens: CUT.show_lens, relief: CUT.show_relief, paint: CUT.show_paint };
+  grp.traverse(o => { if (o.userData.kind) o.visible = !!on[o.userData.kind]; });
 }
 function buildEmb() {
   embGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); embScene.remove(embGroup);
