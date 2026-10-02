@@ -283,7 +283,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -295,7 +295,7 @@ const SPEC = [
 ];
 const EMB_SPEC = [
   ['Copo de metal', [['em_cup_od', 'Diâmetro externo do copo', 25, 60, 0.01], ['em_rim_h', 'Altura até a borda do aro', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_taper', 'Inclinação da parede do copo (°)', 0, 30, 0.5]]],
-  ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Lente', [['em_lens_edge', 'Espessura da lente na borda', 0.5, 4, 0.05], ['em_back', 'Abaulado do verso (0 = verso plano)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/copo', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]]];
@@ -712,7 +712,11 @@ function embDims(p) {
   const backing = p.em_rim_h - 2 * p.em_sheet - p.em_lens_edge;   // espaço entre fundo do copo e lente
   const capH = p.emblem_h - p.em_sheet - backing - p.em_lens_edge; // quanto a frente sobe acima da borda
   const sphR = capH > 0 ? (viewR * viewR + capH * capH) / (2 * capH) : 1e9;
-  return { cupR, viewR, lensR, backing, capH, sphR, zBack: p.em_sheet + backing };
+  // verso abaulado: calota de altura em_back sobre a área visível (lente vira uma casca curva)
+  const b = Math.max(0, Math.min(p.em_back || 0, capH + p.em_lens_edge - 0.3));
+  const backR = b > 0 ? (viewR * viewR + b * b) / (2 * b) : 1e9;
+  const backZ = r => b > 0 && r < viewR ? Math.sqrt(Math.max(0, backR * backR - r * r)) - (backR - b) : 0;
+  return { cupR, viewR, lensR, backing, capH, sphR, zBack: p.em_sheet + backing, b, backZ };
 }
 // arte do relevo (diagrama, números, divisórias) num canvas: 100 unidades = área visível
 let inkCache = null;
@@ -790,11 +794,16 @@ function reliefShapes(p) {
 function reliefGeometry(p) {
   const g = new THREE.ExtrudeGeometry(reliefShapes(p), { depth: p.em_relief + 0.02, bevelEnabled: false, curveSegments: 1 });
   g.rotateX(Math.PI / 2); g.translate(0, 0.02, 0);  // desce do verso da lente, encostando 0,02 mm dentro dela
+  // acompanha o verso abaulado: cada vértice sobe a altura do verso naquele raio
+  const e = embDims(p), pos = g.attributes.position;
+  if (e.b > 0) { for (let i = 0; i < pos.count; i++) pos.setY(i, pos.getY(i) + e.backZ(Math.hypot(pos.getX(i), pos.getZ(i)))); g.computeVertexNormals(); }
   return g;
 }
 // lente lisa por revolução: borda plana + calota na área visível
 function lensProfileE(p) {
-  const e = embDims(p), pts = [[0, 0], [e.lensR, 0], [e.lensR, p.em_lens_edge], [e.viewR, p.em_lens_edge]];
+  const e = embDims(p), n0 = 48, pts = [];
+  for (let i = 0; i <= n0; i++) { const r = e.viewR * i / n0; pts.push([r, e.backZ(r)]); }  // verso, do centro para a borda
+  pts.push([e.lensR, 0], [e.lensR, p.em_lens_edge], [e.viewR, p.em_lens_edge]);
   const n = 64; for (let i = 1; i <= n; i++) { const r = e.viewR * (1 - i / n); pts.push([r, e.capH > 0 ? p.em_lens_edge + Math.sqrt(Math.max(0, e.sphR * e.sphR - r * r)) - (e.sphR - e.capH) : p.em_lens_edge]); }
   return pts;
 }
@@ -847,13 +856,16 @@ function buildEmb() {
   if (P.em_relief > 0) lens.add(new THREE.Mesh(reliefGeometry(P), matRelief));
   embGroup.add(lens);
   // tinta: fica no verso da lente, logo abaixo do relevo
-  const paint = new THREE.Mesh(new THREE.CircleGeometry(e.viewR, 96), matPaint);
-  paint.rotation.x = -Math.PI / 2; paint.position.y = e.zBack - P.em_relief - 0.02; embGroup.add(paint);
+  const pg = new THREE.RingGeometry(0.001, e.viewR, 96, 24); pg.rotateX(-Math.PI / 2);
+  const pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) pp.setY(i, e.backZ(Math.hypot(pp.getX(i), pp.getZ(i))));
+  const paint = new THREE.Mesh(pg, matPaint); paint.position.y = e.zBack - P.em_relief - 0.02; embGroup.add(paint);
   embScene.add(embGroup); applyCut(); frameEmb();
   const warn = [];
-  if (e.backing < P.em_relief) warn.push(`o relevo (${P.em_relief} mm) é maior que o espaço atrás da lente (${e.backing.toFixed(2)} mm)`);
+  // o relevo vai até ~96% do raio visível (divisórias das faixas): o espaço ali é a borda + o pouco que o verso já subiu
+  const room = e.backing + e.backZ(e.viewR * 0.96);
+  if (room < P.em_relief) warn.push(`perto da borda o relevo (${P.em_relief} mm) é maior que o espaço atrás da lente (${room.toFixed(2)} mm)`);
   if (e.capH <= 0) warn.push('a altura total é menor que copo + lente: a frente ficaria plana');
-  document.getElementById('embdisc').innerHTML = `Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Lente). Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm, espaço atrás da lente ${e.backing.toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
+  document.getElementById('embdisc').innerHTML = `Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Lente). Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm, espaço atrás da lente ${e.backing.toFixed(2)} mm na borda, ${(e.backing + e.b).toFixed(2)} mm no centro; espessura no centro ${(p => p)(P.em_lens_edge + e.capH - e.b).toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
 }
 function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; if (!w || !h) return; embRenderer.setSize(w, h, false); embCam.aspect = w / h; embCam.updateProjectionMatrix(); frameEmb(); }
 new ResizeObserver(embResize).observe(embHost);
