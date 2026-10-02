@@ -212,11 +212,11 @@ button:disabled { opacity: .45; cursor: default; }
       <legend>Baixar STL</legend>
       <div class="btns">
         <button class="primary" id="stllente">Lente</button>
-        <button class="primary" id="stlcopo">Anel de metal</button>
+        <button class="primary" id="stlcopo">Disco de alumínio</button>
         <button id="stlmatriz">Matriz do copo</button>
         <button id="stlpuncao">Punção</button>
       </div>
-      <p class="hint">Lente: matriz para o molde de silicone (ou impressa em resina transparente). Pinte pelo verso: preto, vermelho, branco. Anel: estampe um copo de alumínio com matriz + punção, fure o fundo no Ø da área visível: o fundo furado vira a aba de cima e a parede a saia. Apoie a lente na aba e cubra a dobra com resina.</p>
+      <p class="hint">Disco: um copo de alumínio estampado (matriz + punção). O fundo é abaulado, com o desenho em relevo, e vira a aba; a parede vira a saia. Pinte a face de cima: preto, vermelho, branco. Resina: domo cristal vazado por cima, cobrindo a dobra; o STL serve de modelo para o molde.</p>
       <div class="toast" id="embtoast" role="status"></div>
     </fieldset>
     <fieldset>
@@ -229,7 +229,7 @@ button:disabled { opacity: .45; cursor: default; }
   <section class="panel view emb-view emb-only">
     <h2>Emblema <small>arraste para girar · role para zoom</small></h2>
     <div id="embThree"></div>
-    <div class="legend"><span>Anel de metal</span><span>Lente com relevo no verso</span><span>Pintura (vista por trás)</span></div>
+    <div class="legend"><span>Disco de alumínio</span><span>Resina</span><span>Pintura</span></div>
   </section>
 
   <section class="panel controls cam-only" aria-label="Assistente de foto">
@@ -294,12 +294,12 @@ const SPEC = [
   ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
 ];
 const EMB_SPEC = [
-  ['Anel de metal', [['em_cup_od', 'Diâmetro externo do anel', 25, 60, 0.01], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba (no furo)', 0, 5, 0.05]]],
+  ['Disco de alumínio', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba (no furo)', 0, 5, 0.05]]],
   ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_lens_edge', 'Espessura da lente na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Resina na lateral da dobra', 0.05, 2, 0.05], ['em_back_par', 'Estampa paralela à frente da lente', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/anel', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
 ];
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
-  ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo do verso', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Anel de metal', 'bool']]]];
+  ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo estampado', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Disco de alumínio', 'bool']]]];
 const OV = [['ov_scale', 'Escala da foto', 0.02, 1, 0.005], ['ov_x', 'Mover X (mm)', -60, 60, 0.5], ['ov_y', 'Mover Y (mm)', -40, 120, 0.5], ['ov_rot', 'Girar (°)', -45, 45, 0.5], ['ov_tilt', 'Câmera inclinada (°): corrige o achatamento', 0, 30, 0.5], ['ov_op', 'Transparência', 0.05, 1, 0.05], ['ov_sens', 'Sensibilidade do fundo', 0.3, 3, 0.05], ['ov_edge', 'Bloqueio pelas bordas (0 = desligado)', 0, 1, 0.05]];
 const OVDEF = { ov_scale: 0.1, ov_x: 0, ov_y: 28, ov_rot: 0, ov_op: 0.5, ov_v: 2, ov_sens: 1, ov_edge: 0.4, ov_tilt: 0, ov_side: 0 };
 // formato antigo (v1) ancorava a foto na metade da altura; converte para o centro absoluto
@@ -599,13 +599,13 @@ function drawProfile(p) {
   const left = pts.slice().reverse().map(([r, z]) => `${(-r).toFixed(2)},${(-z).toFixed(2)}`);
   const body = `<polygon points="${right.concat(left).join(' ')}" fill="var(--body)" fill-opacity="${photoURL ? 0.35 : 0.9}" stroke="var(--ink)" stroke-width="0.25"/>`;
   const Rl = p.lens_d / 2;
-  // emblema em corte (copo + lente), assentado no rebaixo
+  // emblema em corte (disco + resina), assentado no rebaixo
   const ez = Hb - embedDepth(p), ee = embDims(p);
   const poly2 = (pr, dz) => { const R2 = pr.map(([r, z]) => `${r.toFixed(2)},${(-(z + dz)).toFixed(2)}`), L2 = pr.slice().reverse().map(([r, z]) => `${(-r).toFixed(2)},${(-(z + dz)).toFixed(2)}`); return R2.concat(L2).join(' '); };
   const lens = `<polygon points="${poly2(lensProfileE(p), ez + ee.zBack)}" fill="var(--chrome)" fill-opacity="0.3" stroke="var(--chrome)" stroke-width="0.25"/>`
     + `<polygon points="${poly2(cupProfile(p), ez)}" fill="var(--chrome)" fill-opacity="0.85" stroke="var(--ink)" stroke-width="0.12"/>`;
   const bore = `<rect x="${-p.bore_d / 2}" y="${-p.bore_h}" width="${p.bore_d}" height="${p.bore_h}" fill="var(--panel)" fill-opacity="${photoURL ? 0 : 0.95}" stroke="var(--accent)" stroke-width="0.25" stroke-dasharray="1 0.6"/>`;
-  const dd = p.disc_d / 2, pz = ez + ee.zBack - p.em_relief;
+  const dd = p.disc_d / 2, pz = ez + ee.zBack;
   const discLine = `<line x1="${-dd}" y1="${-pz}" x2="${dd}" y2="${-pz}" stroke="var(--accent)" stroke-width="0.4"/>`;
   const axis = `<line x1="0" y1="${y0}" x2="0" y2="${y0 + h}" stroke="var(--accent)" stroke-width="0.15" stroke-dasharray="3 1 0.5 1"/>`;
   const dx = R + 6;
@@ -721,7 +721,7 @@ function exportSTL(which) {
   // a lente é a do emblema (com relevo no verso), igual à aba Emblema
   let a, vol;
   if (which === 'corpo') ({ a, vol } = latheTriangles(bodySolidProfile(P), 180));
-  else { a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; vol = 0; for (let q = 0; q < a.length; q += 9) vol += (a[q] * (a[q + 4] * a[q + 8] - a[q + 5] * a[q + 7]) - a[q + 1] * (a[q + 3] * a[q + 8] - a[q + 5] * a[q + 6]) + a[q + 2] * (a[q + 3] * a[q + 7] - a[q + 4] * a[q + 6])) / 6; }
+  else { a = lensTriangles(P); vol = 0; for (let q = 0; q < a.length; q += 9) vol += (a[q] * (a[q + 4] * a[q + 8] - a[q + 5] * a[q + 7]) - a[q + 1] * (a[q + 3] * a[q + 8] - a[q + 5] * a[q + 6]) + a[q + 2] * (a[q + 3] * a[q + 7] - a[q + 4] * a[q + 6])) / 6; }
   download(stlBlob(a), `manopla-${which}.stl`);
   t.textContent = `${which === 'corpo' ? 'Corpo baixado' : 'Lente do emblema baixada'}: ${(a.length / 9).toLocaleString('pt-BR')} triângulos, ${(Math.abs(vol) / 1000).toFixed(2)} cm³.`;
 }
@@ -842,13 +842,7 @@ function lensProfileE(p) {
   const m = 96; for (let i = 0; i <= m; i++) { const r = e.r0 * (1 - i / m); pts.push([r, dome(r)]); }
   return pts;
 }
-function lensTriangles(p) {
-  const body = latheTriangles(lensProfileE(p), 256).a;
-  if (!(p.em_relief > 0)) return body;
-  const rel = reliefGeometry(p).toNonIndexed().attributes.position.array;
-  const a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
-  return a;
-}
+function lensTriangles(p) { return latheTriangles(lensProfileE(p), 256).a; }
 // aba de cima vista por trás: largura total = saia até o furo; perto do furo fica a bordinha
 // reta (em_lip_flat), o resto é a curva da dobra que desce para a saia
 function rimDimsRaw(p, cupR, viewR) {
@@ -857,13 +851,23 @@ function rimDimsRaw(p, cupR, viewR) {
   return { full, flat, rc, s, cx: cupR - rc };
 }
 function rimDims(p) { return rimDimsRaw(p, p.em_cup_od / 2, p.disc_d / 2); }
+// disco de alumínio inteiro: centro estampado abaulado (com o relevo), aba, dobra e saia
 function cupProfile(p) {
-  const e = embDims(p), { rc, s, cx } = rimDims(p), H = p.em_rim_h, n = 12, out = [[e.viewR, H]];
+  const e = embDims(p), { rc, s, cx } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [];
+  for (let i = 0; i <= nd; i++) { const r = e.viewR * i / nd; out.push([r, H + e.backZ(r)]); }
   for (let i = 0; i <= n; i++) { const a = Math.PI / 2 * (1 - i / n); out.push([cx + rc * Math.cos(a), H - rc + rc * Math.sin(a)]); }   // dobra por fora
   out.push([e.cupR, 0], [e.cupR - s, 0]);
   for (let i = n; i >= 0; i--) { const a = Math.PI / 2 * (1 - i / n); out.push([cx + (rc - s) * Math.cos(a), H - rc + (rc - s) * Math.sin(a)]); }  // por dentro
-  out.push([e.viewR, H - s], [e.viewR, H]);
+  for (let i = nd; i >= 0; i--) { const r = e.viewR * i / nd; out.push([r, H - s + e.backZ(r)]); }
   return out;
+}
+// disco + relevo estampado saltado por baixo
+function discTriangles(p) {
+  const body = latheTriangles(cupProfile(p), 200).a;
+  if (!(p.em_relief > 0)) return body;
+  const g = reliefGeometry(p); g.translate(0, embDims(p).zBack - p.em_sheet, 0);
+  const rel = g.toNonIndexed().attributes.position.array, a = new Float32Array(body.length + rel.length); a.set(body); a.set(rel, body.length);
+  return a;
 }
 function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
 function punchProfile(p) { const e = embDims(p); return [[0, 0], [e.cupR - p.em_sheet - 0.05, 0], [e.cupR - p.em_sheet - 0.05, 15], [0, 15]]; }
@@ -903,12 +907,12 @@ function emblemGroup(p, m) {
   grp.add(tag(lathe(cupProfile(p), m.cup), 'cup'));
   const lens = new THREE.Group(); lens.position.y = e.zBack;
   lens.add(tag(lathe(lensProfileE(p), m.lens), 'lens'));
-  if (p.em_relief > 0) lens.add(tag(new THREE.Mesh(reliefGeometry(p), m.relief), 'relief'));
   grp.add(lens);
-  // tinta: fica no verso da lente, logo abaixo do relevo, acompanhando a curva
+  if (p.em_relief > 0) { const rel = tag(new THREE.Mesh(reliefGeometry(p), m.cup), 'relief'); rel.position.y = e.zBack - p.em_sheet; grp.add(rel); }
+  // tinta: na face de cima do disco estampado, por baixo da resina
   const pg = new THREE.RingGeometry(0.001, e.viewR, 96, 24); pg.rotateX(-Math.PI / 2);
   const pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) pp.setY(i, e.backZ(Math.hypot(pp.getX(i), pp.getZ(i))));
-  const paint = tag(new THREE.Mesh(pg, m.paint), 'paint'); paint.position.y = e.zBack - p.em_relief - 0.02; grp.add(paint);
+  const paint = tag(new THREE.Mesh(pg, m.paint), 'paint'); paint.position.y = e.zBack + 0.02; grp.add(paint);
   showEmbParts(grp);
   return grp;
 }
@@ -935,8 +939,11 @@ function exportEmb(which) {
   const t = document.getElementById('embtoast');
   if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a> (abre com estas medidas).'; return; }
   let a;
-  if (which === 'lente') { a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; }  // apoia o relevo em z = 0
-  else a = latheTriangles(which === 'copo' ? cupProfile(P) : which === 'matriz' ? dieProfile(P) : punchProfile(P), 200).a;
+  if (which === 'lente') a = lensTriangles(P);
+  else if (which === 'copo') a = discTriangles(P);
+  else a = latheTriangles(which === 'matriz' ? dieProfile(P) : punchProfile(P), 200).a;
+  let z0 = Infinity; for (let i = 1; i < a.length; i += 3) z0 = Math.min(z0, a[i]);
+  for (let i = 1; i < a.length; i += 3) a[i] -= z0;  // apoia em z = 0
   download(stlBlob(a), `emblema-${which}.stl`);
   t.textContent = `${which[0].toUpperCase() + which.slice(1)} baixado: ${(a.length / 9).toLocaleString('pt-BR')} triângulos.`;
 }
@@ -960,8 +967,8 @@ function parseSTL(buf) {
 }
 const PARTS = [
   ['Manopla', 'corpo', 'Corpo', () => latheTriangles(bodySolidProfile(P), 200).a],
-  ['Emblema', 'lente', 'Lente com relevo no verso', () => { const a = lensTriangles(P); for (let i = 1; i < a.length; i += 3) a[i] += P.em_relief; return a; }],
-  ['Emblema', 'copo', 'Anel de metal', () => latheTriangles(cupProfile(P), 200).a],
+  ['Emblema', 'lente', 'Lente de resina', () => lensTriangles(P)],
+  ['Emblema', 'copo', 'Disco de alumínio', () => discTriangles(P)],
   ['Emblema', 'matriz', 'Matriz do copo', () => latheTriangles(dieProfile(P), 200).a],
   ['Emblema', 'puncao', 'Punção do copo', () => latheTriangles(punchProfile(P), 200).a],
   ['Medidor de perfil', 'stl/medidor/pinos.stl', 'Hastes (lote de 35)', null],
