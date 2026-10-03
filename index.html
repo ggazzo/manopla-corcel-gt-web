@@ -877,20 +877,37 @@ function discCurves(p, r1 = 0, s = p.em_sheet) {
   return { outer, inner: out };
 }
 // faces do centro estampado em malha polar até a área visível: o desenho salta em_relief na face de cima e o
-// verso fica liso, para o relevo ser sólido na impressão; o anel externo coincide com o torno de STAMP_SEG lados
+// verso tem o sulco (mais estreito pela espessura da chapa), como na estampagem; o anel externo coincide com o
+// torno de STAMP_SEG lados
 const STAMP_SEG = 720;
 // face: 'top' | 'bottom' | 'paint' (top + 0,02 com UV da pintura); rel = altura do desenho (0 = liso)
-// máscara do desenho (0..1, interpolação bilinear) em x, z do three, em mm
-function inkMask(p) {
+// máscara do desenho (0..1, interpolação bilinear) em x, z do three, em mm; erode (mm) afina o desenho
+// (o sulco do verso é o relevo de cima menos a espessura da chapa de cada lado)
+const erodeCache = {};
+function inkMask(p, erode = 0) {
   const ink = inkMap(p), N = ink.N, k = p.disc_d / 100;
-  const at = (px, py) => px < 0 || py < 0 || px >= N || py >= N ? 0 : ink.a[(py * N + px) * 4 + 3] / 255;
+  let A = null;
+  if (erode > 0) {
+    const key = ink.key + '|' + erode;
+    if (!erodeCache[key]) {
+      // erosão quadrada separável: mínimo numa janela de ±rad pixels, nas linhas e depois nas colunas
+      const rad = Math.round(erode / (p.disc_d / N)), src = new Uint8Array(N * N), tmp = new Uint8Array(N * N), out = new Uint8Array(N * N);
+      for (let i = 0; i < N * N; i++) src[i] = ink.a[i * 4 + 3];
+      const pass = (a, b, step, line) => { for (let l = 0; l < N; l++) for (let i = 0; i < N; i++) { let m = 255; for (let d = -rad; d <= rad && m; d++) { const j = i + d; m = j < 0 || j >= N ? 0 : Math.min(m, a[l * line + j * step]); } b[l * line + i * step] = m; } };
+      pass(src, tmp, 1, N); pass(tmp, out, N, 1);
+      for (const k2 in erodeCache) delete erodeCache[k2];
+      erodeCache[key] = out;
+    }
+    A = erodeCache[key];
+  }
+  const at = (px, py) => px < 0 || py < 0 || px >= N || py >= N ? 0 : (A ? A[py * N + px] : ink.a[(py * N + px) * 4 + 3]) / 255;
   return (x, z) => {
     const fx = (x / k + 50) * N / 100 - 0.5, fy = (z / k + 50) * N / 100 - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
     return (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
   };
 }
-function stampGeometry(p, face, rel) {
-  const e = embDims(p), R1 = e.viewR, nr = 320, mask = inkMask(p);
+function stampGeometry(p, face, rel, erode = face === 'bottom' ? p.em_sheet : 0) {
+  const e = embDims(p), R1 = e.viewR, nr = 320, mask = inkMask(p, erode);
   const base = p.em_rim_h + (face === 'bottom' ? -p.em_sheet : face === 'paint' ? 0.02 : 0);
   const nv = nr * STAMP_SEG + 1, pos = new Float32Array(nv * 3), uv = face === 'paint' ? new Float32Array(nv * 2) : null, idx = [];
   const put = (n, x, z, r, last) => {
@@ -914,7 +931,7 @@ function stampGeometry(p, face, rel) {
 // disco com o centro estampado (as duas faces) para o STL
 function discTriangles(p) {
   const parts = [latheTriangles(cupProfile(p, embDims(p).viewR), STAMP_SEG).a];
-  for (const f of ['top', 'bottom']) parts.push(stampGeometry(p, f, f === 'top' ? p.em_relief : 0).toNonIndexed().attributes.position.array);
+  for (const f of ['top', 'bottom']) parts.push(stampGeometry(p, f, p.em_relief).toNonIndexed().attributes.position.array);
   const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; }
   return a;
 }
@@ -933,7 +950,7 @@ function dieTriangles(p) {
 function punchTriangles(p) {
   const s2 = p.em_sheet + p.die_clear, rel = p.die_relief ? p.em_relief : 0, inn = discCurves(p, embDims(p).viewR, s2).inner;
   const prof = [[0, 0], [inn[0][0], 0]].concat(inn.map(([r, z]) => [r, z + p.punch_h]));
-  const g = stampGeometry(p, 'top', rel); g.translate(0, p.punch_h - s2, 0);  // a chapa sobe junto com o relevo
+  const g = stampGeometry(p, 'top', rel, s2); g.translate(0, p.punch_h - s2, 0);  // a chapa sobe junto com o relevo
   return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
 }
 function joinTris(parts) { const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; } return a; }
@@ -977,7 +994,7 @@ function emblemGroup(p, m) {
   grp.add(tag(new THREE.Mesh(new THREE.LatheGeometry(cupProfile(p, e.viewR).map(([r, z]) => new THREE.Vector2(r, z)), STAMP_SEG), m.cup), 'cup'));
   // centro estampado, liso quando "Relevo estampado" está desligado (applyCut refaz ao mudar)
   const rel = CUT.show_relief ? p.em_relief : 0; builtRelief = !!CUT.show_relief;
-  for (const f of ['top', 'bottom']) grp.add(tag(new THREE.Mesh(stampGeometry(p, f, f === 'top' ? rel : 0), m.cup), 'cup'));
+  for (const f of ['top', 'bottom']) grp.add(tag(new THREE.Mesh(stampGeometry(p, f, rel), m.cup), 'cup'));
   const lens = new THREE.Group(); lens.position.y = e.zBack;
   lens.add(tag(lathe(lensProfileE(p), m.lens), 'lens'));
   grp.add(lens);
@@ -1132,9 +1149,10 @@ function drawEmbProfile(p) {
   for (let x = Math.ceil(x0 * 2) / 2; x <= x1; x += 0.5) g += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" stroke="var(--${x % 1 ? 'grid' : 'grid-strong'})" stroke-width="${x % 1 ? 0.008 : 0.02}"/>`;
   for (let y = Math.ceil(y0 * 2) / 2; y <= y1; y += 0.5) g += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="var(--${y % 1 ? 'grid' : 'grid-strong'})" stroke-width="${y % 1 ? 0.008 : 0.02}"/>`;
   const rel = CUT.show_relief ? p.em_relief : 0, n = 600, rs = Array.from({ length: n + 1 }, (_, i) => e.viewR * i / n);
-  const relTop = rs.map(r => [r, H + e.backZ(r) + rel * mask(r, 0)]), base = rs.map(r => [r, H + e.backZ(r)]).reverse();
-  const metal = `<polygon points="${P2(cupProfile(p))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>`
-    + (rel > 0 ? `<polygon points="${P2(relTop.concat(base))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>` : '');
+  const maskIn = inkMask(p, p.em_sheet), relTop = rs.map(r => [r, H + e.backZ(r) + rel * mask(r, 0)]), relBot = rs.map(r => [r, H - p.em_sheet + e.backZ(r) + rel * maskIn(r, 0)]).reverse();
+  // centro estampado (relevo em cima, sulco no verso) + o resto do disco a partir da beirada da pintura
+  const metal = `<polygon points="${P2(relTop.concat(relBot))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>`
+    + `<polygon points="${P2(cupProfile(p, e.viewR))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>`;
   // pintura com as cores reais da arte naquela linha (branco, vermelho, preto)
   let paint = '';
   if (CUT.show_paint) {
