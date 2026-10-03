@@ -86,7 +86,10 @@ button:disabled { opacity: .45; cursor: default; }
 .tabs { display: flex; gap: 4px; margin-left: auto; }
 .tabs button { font: 600 15px var(--f-display); text-transform: uppercase; letter-spacing: .08em; padding: 6px 14px; }
 .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.wrap:not([data-tab="knob"]) .knob-only, .wrap:not([data-tab="emb"]) .emb-only, .wrap:not([data-tab="cam"]) .cam-only, .wrap:not([data-tab="parts"]) .parts-only { display: none !important; }
+.wrap:not([data-tab="knob"]) .knob-only, .wrap:not([data-tab="emb"]) .emb-only, .wrap:not([data-tab="cam"]) .cam-only, .wrap:not([data-tab="parts"]) .parts-only, .wrap:not([data-tab="die"]) .die-only { display: none !important; }
+.die-view { grid-column: 2 / -1; }
+#dieThree { flex: 1; min-height: 480px; position: relative; }
+#dieThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .parts-view { grid-column: 2 / -1; }
 #partsThree { flex: 1; min-height: 420px; position: relative; }
 #partsThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
@@ -108,8 +111,8 @@ button:disabled { opacity: .45; cursor: default; }
 #embThree { flex: 1; min-height: 420px; position: relative; }
 #embThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .legend { display: flex; justify-content: space-around; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font: 12px var(--f-mono); }
-@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .emb-prof, .cam-view, .parts-view { grid-column: 2; } }
-@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .emb-prof, .cam-view, .parts-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .emb-prof, .die-view, .cam-view, .parts-view { grid-column: 2; } }
+@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .emb-prof, .die-view, .cam-view, .parts-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -121,6 +124,7 @@ button:disabled { opacity: .45; cursor: default; }
       <button role="tab" id="tab-knob" aria-selected="true">Manopla</button>
       <button role="tab" id="tab-emb" aria-selected="false">Emblema</button>
       <button role="tab" id="tab-cam" aria-selected="false">Câmera</button>
+      <button role="tab" id="tab-die" aria-selected="false">Matriz</button>
       <button role="tab" id="tab-parts" aria-selected="false">Peças</button>
     </div>
   </header>
@@ -216,8 +220,6 @@ button:disabled { opacity: .45; cursor: default; }
       <div class="btns">
         <button class="primary" id="stllente">Lente</button>
         <button class="primary" id="stlcopo">Disco de alumínio</button>
-        <button id="stlmatriz">Matriz do copo</button>
-        <button id="stlpuncao">Punção</button>
       </div>
       <p class="hint">Disco: um copo de alumínio estampado (matriz + punção). O fundo é abaulado, com o desenho em relevo, e vira a aba; a parede vira a saia. Pinte a face de cima: preto, vermelho, branco. Resina: domo cristal vazado por cima, cobrindo a dobra; o STL serve de modelo para o molde.</p>
       <div class="toast" id="embtoast" role="status"></div>
@@ -266,6 +268,27 @@ button:disabled { opacity: .45; cursor: default; }
     <div class="camstage"><video id="camvideo" playsinline autoplay muted></video><canvas id="camover"></canvas></div>
   </section>
 
+  <section class="panel controls die-only" aria-label="Matriz e punção">
+    <fieldset>
+      <legend>Matriz e punção</legend>
+      <p class="hint" id="dieinfo"></p>
+    </fieldset>
+    <div id="diefields"></div>
+    <div id="dvfields"></div>
+    <fieldset>
+      <legend>Baixar STL</legend>
+      <div class="btns"><button class="primary" id="stlmatriz">Matriz</button><button class="primary" id="stlpuncao">Punção</button></div>
+      <p class="hint">Ponha a chapa sobre a matriz, o punção por cima (de ponta para baixo) e aperte na morsa ou na prensa. A medida do disco vem da aba Emblema. Imprima em resina ou PETG 100%.</p>
+      <div class="toast" id="dietoast" role="status"></div>
+    </fieldset>
+  </section>
+
+  <section class="panel view die-view die-only">
+    <h2>Matriz e punção <small>arraste para girar · role para zoom</small></h2>
+    <div id="dieThree"></div>
+    <div class="legend"><span>Matriz</span><span>Disco estampado</span><span>Punção</span></div>
+  </section>
+
   <section class="panel controls parts-only" aria-label="Peças">
     <fieldset>
       <legend>Peças</legend>
@@ -291,7 +314,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45, die_margin: 6, die_base: 4, die_clear: 0.1, punch_h: 8, die_relief: 1 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45, die_margin: 6, die_base: 4, die_clear: 0.1, punch_h: 8, die_relief: 1, punch_narrow: 0.1 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -304,11 +327,16 @@ const SPEC = [
 const EMB_SPEC = [
   ['Medidas gerais', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['disc_d', 'Área pintada (Ø)', 10, 65, 0.05], ['emblem_h', 'Altura total (pé da saia ao topo da resina)', 1, 12, 0.05], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05]]],
   ['Disco de alumínio', [['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_taper', 'Inclinação da saia (°; + abre para baixo)', -30, 30, 0.5], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1], ['em_relief', 'Altura do relevo (face de cima)', 0, 2, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
-  ['Matriz do copo (estampar)', [['die_margin', 'Parede da matriz em volta do disco', 2, 20, 0.5], ['die_base', 'Fundo da matriz (abaixo da cavidade)', 1, 15, 0.5], ['die_clear', 'Folga do punção além da chapa', 0, 0.5, 0.02], ['punch_h', 'Altura do punção abaixo do pé da saia', 2, 30, 0.5], ['die_relief', 'Copiar o relevo do desenho na matriz e no punção', 'bool']]],
   ['Resina', [['em_over', 'Resina cobre a dobra do metal', 'bool'], ['em_lens_edge', 'Espessura na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Película na lateral da dobra', 0.05, 2, 0.05], ['em_gap', 'Folga até a dobra (sem cobrir a dobra)', 0, 0.5, 0.05], ['em_back_par', 'Estampa paralela à frente da resina', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05]]],
 ];
+const DIE_SPEC = [
+  ['Matriz (fêmea)', [['die_margin', 'Parede em volta do disco', 2, 20, 0.5], ['die_base', 'Fundo abaixo da cavidade', 1, 15, 0.5], ['die_relief', 'Copiar o relevo do desenho', 'bool']]],
+  ['Punção (macho)', [['punch_h', 'Altura abaixo do pé da saia', 2, 30, 0.5], ['die_clear', 'Folga além da espessura da chapa', 0, 0.5, 0.02], ['punch_narrow', 'Estreitar o relevo do punção (cada lado)', 0, 1, 0.02]]],
+];
+const DV = { dv_gap: 10, dv_cut: 1, dv_die: 1, dv_disc: 1, dv_punch: 1 };
+const DV_SPEC = [['Vista', [['dv_gap', 'Afastar as peças', 0, 30, 0.5], ['dv_cut', 'Em corte', 'bool'], ['dv_die', 'Matriz', 'bool'], ['dv_disc', 'Disco estampado', 'bool'], ['dv_punch', 'Punção', 'bool']]]];
 // campos que só valem com outro ligado/desligado ficam desativados
-const DEPENDS = { em_back: p => !p.em_back_par, em_gap: p => !p.em_over, em_film: p => p.em_over, em_ridge_w: p => p.em_ridges, shoulder_z: p => !p.shoulder_link };
+const DEPENDS = { punch_narrow: p => p.die_relief, em_back: p => !p.em_back_par, em_gap: p => !p.em_over, em_film: p => p.em_over, em_ridge_w: p => p.em_ridges, shoulder_z: p => !p.shoulder_link };
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
   ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo estampado', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Disco de alumínio', 'bool']]]];
@@ -941,16 +969,19 @@ function dieTriangles(p) {
   const hm = p.die_base + Math.max(...rs.map(r => H + e.backZ(r))) + rel, Rm = e.cupR + p.die_margin, R1 = e.viewR;
   const flip = ([r, z]) => [r, hm - z], out = discCurves(p, R1).outer.slice().reverse().map(flip);
   const prof = [[0, 0], [Rm, 0], [Rm, hm]].concat(out);
-  // o fundo da cavidade é a face de cima espelhada; o espelho já vira as faces para dentro do bloco
-  const g = stampGeometry(p, 'top', rel), pos = g.attributes.position;
-  for (let i = 0; i < pos.count; i++) pos.setY(i, hm - pos.getY(i));
+  // o disco entra de cabeça para baixo (meia volta no eixo x): o desenho no fundo da cavidade sai espelhado
+  const g = stampGeometry(p, 'top', rel), pos = g.attributes.position, ix = g.index.array;
+  for (let i = 0; i < pos.count; i++) { pos.setY(i, hm - pos.getY(i)); pos.setZ(i, -pos.getZ(i)); }
+  for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }  // a meia volta deixa as faces viradas para fora da cavidade
   return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
 }
-// punção (macho): a face de dentro do disco com chapa + folga, descendo punch_h abaixo do pé; base plana em z = 0
+// punção (macho): a face de dentro do disco com chapa + folga, abaulada, com o relevo que empurra a chapa
+// (largura do desenho menos punch_narrow de cada lado); desce punch_h abaixo do pé, base plana em z = 0.
+// Impresso de ponta para cima, ele vira de cabeça para baixo para prensar e o desenho fica na posição certa
 function punchTriangles(p) {
   const s2 = p.em_sheet + p.die_clear, rel = p.die_relief ? p.em_relief : 0, inn = discCurves(p, embDims(p).viewR, s2).inner;
   const prof = [[0, 0], [inn[0][0], 0]].concat(inn.map(([r, z]) => [r, z + p.punch_h]));
-  const g = stampGeometry(p, 'top', rel, s2); g.translate(0, p.punch_h - s2, 0);  // a chapa sobe junto com o relevo
+  const g = stampGeometry(p, 'top', rel, p.punch_narrow || 0); g.translate(0, p.punch_h - s2, 0);
   return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
 }
 function joinTris(parts) { const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; } return a; }
@@ -1024,7 +1055,7 @@ function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; 
 new ResizeObserver(embResize).observe(embHost);
 (function embLoop() { if (embHost.clientWidth) { embControls.update(); embRenderer.render(embScene, embCam); } requestAnimationFrame(embLoop); })();
 function exportEmb(which) {
-  const t = document.getElementById('embtoast');
+  const t = document.getElementById(which === 'matriz' || which === 'puncao' ? 'dietoast' : 'embtoast');
   if (!OWN_URL) { t.innerHTML = 'Aqui dentro do Claude o download é bloqueado. Baixe pelo <a href="https://ggazzo.github.io/manopla-corcel-gt-web/#' + encodeHash(P) + '" target="_blank" rel="noopener">site no GitHub</a> (abre com estas medidas).'; return; }
   let a;
   if (which === 'lente') a = lensTriangles(P);
@@ -1169,6 +1200,55 @@ function drawEmbProfile(p) {
   refreshHover();
 }
 
+/* ---------- aba Matriz: matriz, disco e punção montados na posição de prensar ---------- */
+const dieHost = document.getElementById('dieThree');
+const dieRenderer = new THREE.WebGLRenderer({ antialias: true });
+dieRenderer.setPixelRatio(Math.min(devicePixelRatio, 2)); dieRenderer.localClippingEnabled = true; dieHost.appendChild(dieRenderer.domElement);
+const dieScene = new THREE.Scene(), dieCam = new THREE.PerspectiveCamera(30, 1, 1, 3000);
+const dieControls = new THREE.OrbitControls(dieCam, dieRenderer.domElement); dieControls.enableDamping = true;
+dieScene.add(new THREE.HemisphereLight(0xffffff, 0x404448, 0.8));
+{ const k = new THREE.DirectionalLight(0xffffff, 0.9); k.position.set(-60, 100, 50); dieScene.add(k); }
+dieScene.environment = studioEnv(dieRenderer);
+const dieCut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const dieMats = {
+  die: new THREE.MeshStandardMaterial({ color: 0x5d6670, roughness: 0.6, metalness: 0.1, side: THREE.DoubleSide }),
+  disc: new THREE.MeshStandardMaterial({ color: 0xc9ced2, roughness: 0.35, metalness: 0.85, side: THREE.DoubleSide }),
+  punch: new THREE.MeshStandardMaterial({ color: 0xd98c2b, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide }),
+};
+const dieMesh = {}; let dieHm = 0, dieMoved = false, dieTimer = 0;
+dieControls.addEventListener('start', () => { dieMoved = true; });
+const meshFrom = (a, m) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3)); g.computeVertexNormals(); return new THREE.Mesh(g, m); };
+function buildDie() {
+  for (const k in dieMesh) { dieScene.remove(dieMesh[k]); dieMesh[k].geometry.dispose(); }
+  const e = embDims(P), rel = P.die_relief ? P.em_relief : 0;
+  dieHm = P.die_base + Math.max(...Array.from({ length: 65 }, (_, i) => P.em_rim_h + e.backZ(e.stepR * i / 64))) + rel;
+  dieMesh.die = meshFrom(dieTriangles(P), dieMats.die);
+  // disco e punção viram de cabeça para baixo (meia volta no eixo x) para entrar na matriz
+  dieMesh.disc = meshFrom(discTriangles(P), dieMats.disc); dieMesh.disc.rotation.x = Math.PI;
+  dieMesh.punch = meshFrom(punchTriangles(P), dieMats.punch); dieMesh.punch.rotation.x = Math.PI;
+  for (const k in dieMesh) dieScene.add(dieMesh[k]);
+  placeDie();
+  const s2 = P.em_sheet + P.die_clear;
+  document.getElementById('dieinfo').textContent = `Matriz Ø${(2 * (e.cupR + P.die_margin)).toFixed(1)} × ${dieHm.toFixed(2)} mm. Punção Ø${(2 * discCurves(P, 0, s2).inner[0][0]).toFixed(2)} mm. Folga entre as duas faces: ${s2.toFixed(2)} mm (chapa ${P.em_sheet} + ${P.die_clear}). Relevo ${rel ? `de ${P.em_relief} mm, espelhado na matriz` : 'desligado'}. Mesmas medidas do disco da aba Emblema.`;
+}
+function buildDieSoon() { clearTimeout(dieTimer); dieTimer = setTimeout(buildDie, 200); }
+function placeDie() {
+  if (!dieMesh.die) return;
+  const g = DV.dv_gap;
+  dieMesh.disc.position.y = dieHm + g;            // face de cima do disco encostada na cavidade quando g = 0
+  dieMesh.punch.position.y = dieHm + P.punch_h + 2 * g;
+  dieMesh.die.visible = !!DV.dv_die; dieMesh.disc.visible = !!DV.dv_disc; dieMesh.punch.visible = !!DV.dv_punch;
+  dieCut.constant = 0;
+  for (const m of Object.values(dieMats)) { m.clippingPlanes = DV.dv_cut ? [dieCut] : []; m.needsUpdate = true; }
+  if (!dieMoved) {
+    const W = (embDims(P).cupR + P.die_margin) * 2.6, d = W / (2 * Math.tan(dieCam.fov * Math.PI / 360) * Math.min(1, Math.max(dieCam.aspect, 0.3)));
+    dieCam.position.set(d * 0.75, dieHm + d * 0.45, d * 0.55); dieControls.target.set(0, dieHm + g, 0); dieControls.update();
+  }
+}
+function dieResize() { const w = dieHost.clientWidth, h = dieHost.clientHeight; if (!w || !h) return; dieRenderer.setSize(w, h, false); dieCam.aspect = w / h; dieCam.updateProjectionMatrix(); }
+new ResizeObserver(dieResize).observe(dieHost);
+(function dieLoop() { if (dieHost.clientWidth) { dieControls.update(); dieRenderer.render(dieScene, dieCam); } requestAnimationFrame(dieLoop); })();
+
 /* ---------- aba Peças: visualizador de todos os STLs ---------- */
 // STL ASCII ou binário → triângulos em coordenadas do three (Z da impressora vira Y)
 function parseSTL(buf) {
@@ -1256,16 +1336,19 @@ function setTab(tab) {
   document.getElementById('tab-emb').setAttribute('aria-selected', tab === 'emb');
   document.getElementById('tab-cam').setAttribute('aria-selected', tab === 'cam');
   document.getElementById('tab-parts').setAttribute('aria-selected', tab === 'parts');
+  document.getElementById('tab-die').setAttribute('aria-selected', tab === 'die');
   if (tab !== 'cam' && typeof camStop === 'function' && cam.stream) camStop();
   try { localStorage.setItem('manopla-tab', tab); } catch (e) {}
   if (tab === 'emb') { buildEmb(); requestAnimationFrame(embResize); }
   else if (tab === 'parts') { requestAnimationFrame(() => { partsResize(); showPart(true); }); }
+  else if (tab === 'die') { requestAnimationFrame(() => { dieResize(); buildDie(); }); }
   else requestAnimationFrame(resize);
 }
 document.getElementById('tab-knob').addEventListener('click', () => setTab('knob'));
 document.getElementById('tab-emb').addEventListener('click', () => setTab('emb'));
 document.getElementById('tab-cam').addEventListener('click', () => setTab('cam'));
 document.getElementById('tab-parts').addEventListener('click', () => setTab('parts'));
+document.getElementById('tab-die').addEventListener('click', () => setTab('die'));
 
 /* ---------- aba Câmera: nível + análise ao vivo da imagem ---------- */
 const cam = { stream: null, timer: 0, roll: null, pitch: null, last: null };
@@ -1413,6 +1496,7 @@ function scadBlock(p) {
 function update() {
   build3D(P); drawProfile(P);
   if (document.querySelector('.wrap').dataset.tab === 'emb') buildEmb();
+  if (document.querySelector('.wrap').dataset.tab === 'die') buildDieSoon();
   if (document.querySelector('.wrap').dataset.tab === 'parts' && typeof showPart === 'function') showPart(false);
   document.getElementById('out').textContent = scadBlock(P);
   document.getElementById('link').value = shareLink();
@@ -1847,8 +1931,10 @@ linkState();
 buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); liveDetect(); });
 buildFields(document.getElementById('embfields'), EMB_SPEC, P, () => { linkState(); update(); });
 buildFields(document.getElementById('cutfields'), CUT_SPEC, CUT, applyCut);
+buildFields(document.getElementById('diefields'), DIE_SPEC, P, () => { linkState(); update(); });
+buildFields(document.getElementById('dvfields'), DV_SPEC, DV, () => placeDie());
 applyTheme(); resize(); update();
 liveDetect();
-try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam' || tb === 'parts') setTab(tb); } catch (e) {}
+try { const tb = localStorage.getItem('manopla-tab'); if (tb === 'emb' || tb === 'cam' || tb === 'parts' || tb === 'die') setTab(tb); } catch (e) {}
 if (fromLink) document.getElementById('toast').textContent = 'Medidas carregadas do link.';
 </script>
