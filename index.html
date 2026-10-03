@@ -35,6 +35,8 @@ fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
 legend { font-family: var(--f-display); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 0 4px; }
 .row { display: grid; grid-template-columns: 1fr 64px; gap: 4px 8px; align-items: center; }
 .row label { font-size: 13px; }
+.row.off { opacity: .4; }
+.row:hover label, .row:focus-within label { color: var(--warn); }
 .row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
 .row input[type=number] { font-family: var(--f-mono); font-size: 13px; width: 100%; box-sizing: border-box; padding: 2px 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--bg); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
 .btns { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -101,12 +103,13 @@ button:disabled { opacity: .45; cursor: default; }
 .checks li.ok::before { background: var(--fit); } .checks li.warn::before { background: var(--warn); } .checks li.bad::before { background: var(--accent); }
 .checks small { display: block; color: var(--muted); font-size: 12px; }
 .levelnum { font: 500 22px var(--f-mono); font-variant-numeric: tabular-nums; }
-.emb-view { grid-column: 2 / -1; }
+.emb-view, .emb-prof { grid-column: 2 / -1; }
+#embProfile { width: 100%; height: 300px; display: block; }
 #embThree { flex: 1; min-height: 420px; position: relative; }
 #embThree canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .legend { display: flex; justify-content: space-around; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font: 12px var(--f-mono); }
-@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .cam-view, .parts-view { grid-column: 2; } }
-@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .cam-view, .parts-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 280px minmax(0, 1fr); } .v3 { grid-column: 2; } .vp { grid-column: 1 / -1; } .emb-view, .emb-prof, .cam-view, .parts-view { grid-column: 2; } }
+@media (max-width: 700px) { .wrap { grid-template-columns: minmax(0, 1fr); } .v3, .vp, .emb-view, .emb-prof, .cam-view, .parts-view { grid-column: auto; } .cam-view { order: -1; } .controls { max-height: none; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -232,6 +235,11 @@ button:disabled { opacity: .45; cursor: default; }
     <div class="legend"><span>Disco de alumínio</span><span>Resina</span><span>Pintura</span></div>
   </section>
 
+  <section class="panel view emb-prof emb-only">
+    <h2>Perfil em corte <small>meia seção, do eixo para a borda · grade 0,5 / 1 mm</small></h2>
+    <svg id="embProfile" role="img" aria-label="Perfil em corte do emblema"></svg>
+  </section>
+
   <section class="panel controls cam-only" aria-label="Assistente de foto">
     <fieldset>
       <legend>Assistente de foto</legend>
@@ -287,16 +295,19 @@ const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
-  ['Emblema no topo', [['lens_d', 'Diâmetro do topo do corpo', 20, 65, 0.05], ['lens_h', 'Altura do emblema acima do corpo', 0.5, 15, 0.05], ['disc_d', 'Área visível do desenho (Ø)', 10, 65, 0.05], ['emblem_h', 'Altura total do emblema (copo + lente)', 1, 12, 0.05]]],
+  ['Emblema no topo', [['lens_d', 'Diâmetro do topo do corpo', 20, 65, 0.05], ['lens_h', 'Altura do emblema acima do corpo', 0.5, 15, 0.05]]],
   ['Friso', [['shoulder_link', 'Friso na altura do ombro', 'bool'], ['groove_z', 'Altura do friso (da base)', 10, 80, 0.5], ['groove_w', 'Largura do friso', 0.2, 4, 0.1], ['groove_depth', 'Profundidade do friso', 0, 3, 0.1], ['ressalto', 'Ressalto (ombro sobre a saia)', -2, 4, 0.1]]],
   ['Base e furo', [['bottom_d', 'Diâmetro da base', 15, 60, 0.5], ['lip_h', 'Altura da aba', 0, 8, 0.5], ['lip_w', 'Saliência da aba', 0, 3, 0.1], ['bore_d', 'Diâmetro do furo', 5, 30, 0.5], ['bore_h', 'Profundidade do furo', 5, 60, 0.5]]],
   ['Contorno livre', [['free_body', 'Usar contorno livre (arraste os pontos no perfil)', 'bool']]],
-  ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05], ['r_lens', 'Borda da lente', 0, 4, 0.1]]],
+  ['Arredondamentos (raio)', [['r_base', 'Canto de baixo da base', 0, 4, 0.1], ['r_lip', 'Cantos da aba', 0, 3, 0.1], ['r_groove', 'Bordas do friso', 0, 2, 0.05]]],
 ];
 const EMB_SPEC = [
-  ['Disco de alumínio', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05], ['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_taper', 'Inclinação da saia (°; + abre para baixo)', -30, 30, 0.5], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1]]],
-  ['Lente', [['em_over', 'Resina cobre a borda de metal', 'bool'], ['em_lens_edge', 'Espessura da lente na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Resina na lateral da dobra', 0.05, 2, 0.05], ['em_back_par', 'Estampa paralela à frente da lente', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05], ['em_relief', 'Relevo no verso', 0, 2, 0.05], ['em_gap', 'Folga lente/anel', 0, 0.5, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Medidas gerais', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['disc_d', 'Área pintada (Ø)', 10, 65, 0.05], ['emblem_h', 'Altura total (pé da saia ao topo da resina)', 1, 12, 0.05], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05]]],
+  ['Disco de alumínio', [['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_taper', 'Inclinação da saia (°; + abre para baixo)', -30, 30, 0.5], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1], ['em_relief', 'Altura do relevo (face de cima)', 0, 2, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Resina', [['em_over', 'Resina cobre a dobra do metal', 'bool'], ['em_lens_edge', 'Espessura na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Película na lateral da dobra', 0.05, 2, 0.05], ['em_gap', 'Folga até a dobra (sem cobrir a dobra)', 0, 0.5, 0.05], ['em_back_par', 'Estampa paralela à frente da resina', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05]]],
 ];
+// campos que só valem com outro ligado/desligado ficam desativados
+const DEPENDS = { em_back: p => !p.em_back_par, em_gap: p => !p.em_over, em_film: p => p.em_over, em_ridge_w: p => p.em_ridges, shoulder_z: p => !p.shoulder_link };
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
   ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo estampado', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Disco de alumínio', 'bool']]]];
@@ -333,6 +344,8 @@ function buildFields(host, spec, obj, onChange) {
     if (title) fs.innerHTML = `<legend>${title}</legend>`;
     for (const [key, label, min, max, step] of items) {
       const row = document.createElement('div'); row.className = 'row';
+      // passar o mouse (ou focar) no campo marca no objeto o que ele mede
+      for (const [ev, k] of [['mouseenter', key], ['focusin', key], ['mouseleave', null], ['focusout', null]]) row.addEventListener(ev, () => setHover(k));
       if (min === 'bool') {
         row.className = 'row check';
         row.innerHTML = `<label for="c_${key}"><input type="checkbox" id="c_${key}"> ${label}</label>`;
@@ -360,7 +373,8 @@ function syncFields(obj) {
 function linkState() {
   if (!('shoulder_link' in P)) return;
   if (P.shoulder_link) P.shoulder_z = P.groove_z;
-  for (const id of ['n_shoulder_z', 'r_shoulder_z']) { const el = document.getElementById(id); if (el) { el.disabled = !!P.shoulder_link; el.value = P.shoulder_z; } }
+  for (const id of ['n_shoulder_z', 'r_shoulder_z']) { const el = document.getElementById(id); if (el) el.value = P.shoulder_z; }
+  for (const k in DEPENDS) { const off = !DEPENDS[k](P); for (const id of ['n_', 'r_']) { const el = document.getElementById(id + k); if (el) { el.disabled = off; el.closest('.row').classList.toggle('off', off); } } }
 }
 
 // mesma geometria do manopla-corcel.scad: pontos [raio, altura, raio_do_arredondamento]
@@ -444,27 +458,6 @@ function cutGroove(raw, g0, g1, depth, rg) {
   const below = raw.filter(q => q[1] < g0 || (q[0] === 0 && q[1] === 0)), above = raw.filter(q => q[1] > g1);
   return below.concat([[r0, g0, rg], [ri, g0, rg], [ri, g1, rg], [r1, g1, rg]], above);
 }
-// lente: lateral reta (base -> topo), borda arredondada tangente a uma calota esférica
-function lensProfile(p) {
-  const Rl = p.lens_d / 2, a = p.lens_top_d / 2, h = p.lens_h, dome = p.lens_dome;
-  const r = Math.max(0, Math.min(p.r_lens, a * 0.9, h * 0.9));
-  const pts = [[0, 0], [Rl, 0]];
-  if (dome < 0.01) {
-    pts.push([a, h - r]);
-    for (let i = 1; i <= 12; i++) { const q = i / 12 * Math.PI / 2; pts.push([a - r + r * Math.cos(q), h - r + r * Math.sin(q)]); }
-    pts.push([0, h]);
-    return pts;
-  }
-  const Rs = (a * a + dome * dome) / (2 * dome), zc = h + dome - Rs;
-  const cx = a - r, cz = zc + Math.sqrt(Math.max(0, (Rs - r) ** 2 - cx * cx));
-  const beta = Math.atan2(cz - zc, cx);
-  pts.push([a, cz]);
-  for (let i = 1; i <= 12; i++) { const q = beta * i / 12; pts.push([cx + r * Math.cos(q), cz + r * Math.sin(q)]); }
-  const g0 = Math.atan2(pts[pts.length - 1][1] - zc, pts[pts.length - 1][0]);
-  for (let i = 1; i <= 24; i++) { const q = g0 + (Math.PI / 2 - g0) * i / 24; pts.push([Rs * Math.cos(q), zc + Rs * Math.sin(q)]); }
-  pts[pts.length - 1][0] = 0;
-  return pts;
-}
 
 function problems(p) {
   const out = [];
@@ -475,6 +468,8 @@ function problems(p) {
   if (p.disc_d > p.em_cup_od) out.push('área visível maior que o copo');
   if (p.bore_d >= p.bottom_d) out.push('furo maior que a base');
   if (p.bore_h >= p.H - p.lens_h) out.push('furo atravessa o topo');
+  if (p.lens_h > p.emblem_h + 0.01) out.push(`emblema (${p.emblem_h} mm) mais baixo que a altura acima do corpo (${p.lens_h} mm): a altura total não fecha`);
+  if (embedDepth(p) > 0 && p.em_cup_od + 0.3 > p.lens_d - 0.4) out.push('rebaixo do topo menor que o emblema: aumente o diâmetro do topo do corpo');
   return out;
 }
 
@@ -644,6 +639,7 @@ function drawProfile(p) {
   if (ruler) ruler.pts.forEach((q, i) => { rl += `<circle cx="${q.x}" cy="${q.y}" r="0.8" fill="none" stroke="var(--warn)" stroke-width="0.3"/><line x1="${q.x - 1.5}" y1="${q.y}" x2="${q.x + 1.5}" y2="${q.y}" stroke="var(--warn)" stroke-width="0.15"/><line x1="${q.x}" y1="${q.y - 1.5}" x2="${q.x}" y2="${q.y + 1.5}" stroke="var(--warn)" stroke-width="0.15"/>`; });
   if (ruler && ruler.pts.length === 2) rl += `<line x1="${ruler.pts[0].x}" y1="${ruler.pts[0].y}" x2="${ruler.pts[1].x}" y2="${ruler.pts[1].y}" stroke="var(--warn)" stroke-width="0.25" stroke-dasharray="1 0.5"/>`;
   svg.innerHTML = g + img + body + bore + lens + discLine + axis + meas + dims + w + rl + freeHandles(p);
+  if (typeof refreshHover === 'function') refreshHover();
 }
 
 function freeHandles(p) {
@@ -880,13 +876,17 @@ function cupProfile(p, r1 = 0) {
 // verso fica liso, para o relevo ser sólido na impressão; o anel externo coincide com o torno de STAMP_SEG lados
 const STAMP_SEG = 720;
 // face: 'top' | 'bottom' | 'paint' (top + 0,02 com UV da pintura); rel = altura do desenho (0 = liso)
-function stampGeometry(p, face, rel) {
-  const e = embDims(p), ink = inkMap(p), N = ink.N, R1 = e.viewR, nr = 320, k = p.disc_d / 100;
+// máscara do desenho (0..1, interpolação bilinear) em x, z do three, em mm
+function inkMask(p) {
+  const ink = inkMap(p), N = ink.N, k = p.disc_d / 100;
   const at = (px, py) => px < 0 || py < 0 || px >= N || py >= N ? 0 : ink.a[(py * N + px) * 4 + 3] / 255;
-  const mask = (x, z) => {  // máscara do desenho com interpolação bilinear (0..1)
+  return (x, z) => {
     const fx = (x / k + 50) * N / 100 - 0.5, fy = (z / k + 50) * N / 100 - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
     return (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
   };
+}
+function stampGeometry(p, face, rel) {
+  const e = embDims(p), R1 = e.viewR, nr = 320, mask = inkMask(p);
   const base = p.em_rim_h + (face === 'bottom' ? -p.em_sheet : face === 'paint' ? 0.02 : 0);
   const nv = nr * STAMP_SEG + 1, pos = new Float32Array(nv * 3), uv = face === 'paint' ? new Float32Array(nv * 2) : null, idx = [];
   const put = (n, x, z, r, last) => {
@@ -945,6 +945,7 @@ function applyCut() {
   showEmbParts(embGroup); if (typeof part !== 'undefined') showEmbParts(part);
   const on = !!CUT.cut_on; cutPlane.constant = CUT.cut_pos;
   for (const m of [matCup, matLensE, matPaint, matRelief]) { m.clippingPlanes = on ? [cutPlane] : []; m.needsUpdate = true; }
+  if (typeof drawEmbProfile === 'function') drawEmbProfile(P);
 }
 // emblema montado (copo + lente com relevo + pintura), com a base do copo em y = 0; usado nas abas Emblema e Manopla
 function emblemGroup(p, m) {
@@ -972,12 +973,13 @@ function buildEmb() {
   embGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); embScene.remove(embGroup);
   const e = embDims(P);
   embGroup = emblemGroup(P, { cup: matCup, lens: matLensE, relief: matRelief, paint: matPaint });
-  embScene.add(embGroup); applyCut(); frameEmb();
+  embScene.add(embGroup); applyCut(); frameEmb(); drawEmbProfile(P);
   const warn = [];
-  if (P.em_relief + 0.1 > e.zBack - P.em_sheet) warn.push(`o relevo (${P.em_relief} mm) não cabe dentro da saia`);
+  const over = P.emblem_h - e.zBack - e.b + (P.em_step || 0) - P.em_relief;
+  if (over < 0.2) warn.push(over < 0 ? `o relevo fura a resina (${(-over).toFixed(2)} mm para fora)` : `só ${over.toFixed(2)} mm de resina sobre o relevo`);
   if (P.emblem_h - e.zBack - P.em_lens_edge <= 0.05) warn.push('a altura total é menor que a saia: a frente ficaria plana');
   const rd = rimDims(P);
-  document.getElementById('embdisc').innerHTML = `Aba de cima (vista por trás): ${rd.full.toFixed(2)} mm de largura total, ${rd.flat.toFixed(2)} mm de bordinha reta, dobra r=${rd.rc.toFixed(2)}. Área visível Ø${P.disc_d} e altura total ${P.emblem_h} mm vêm da aba Manopla (grupo Emblema no topo); a manopla mostra este mesmo emblema. Lente Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm acima da beirada; estampa sobe ${e.b.toFixed(2)} mm no centro; espessura no centro ${(P.emblem_h - e.zBack - e.b).toFixed(2)} mm.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
+  document.getElementById('embdisc').innerHTML = `Aba de cima (vista por trás): ${rd.full.toFixed(2)} mm de largura, dos quais ${Math.max(0, rd.cx - Math.max(e.stepR, e.viewR)).toFixed(2)} mm retos e dobra r=${rd.rc.toFixed(2)}. Resina Ø${(2 * e.lensR).toFixed(2)} mm, frente sobe ${e.capH.toFixed(2)} mm acima da beirada; estampa sobe ${e.b.toFixed(2)} mm no centro; resina com ${(P.emblem_h - e.zBack - e.b + (P.em_step || 0)).toFixed(2)} mm no centro (${(P.emblem_h - e.zBack - e.b + (P.em_step || 0) - P.em_relief).toFixed(2)} mm sobre o relevo). A aba Manopla usa este emblema; passe o mouse num campo para ver no desenho o que ele mede.` + (warn.length ? `<br><b style="color:var(--accent)">⚠ ${warn.join('; ')}</b>` : '');
 }
 function embResize() { const w = embHost.clientWidth, h = embHost.clientHeight; if (!w || !h) return; embRenderer.setSize(w, h, false); embCam.aspect = w / h; embCam.updateProjectionMatrix(); frameEmb(); }
 new ResizeObserver(embResize).observe(embHost);
@@ -999,6 +1001,129 @@ document.getElementById('emb2knob').addEventListener('click', () => {
   checkpoint(); P.lens_d = P.em_cup_od; syncFields(P); update();
   document.getElementById('embtoast').textContent = `Topo do corpo ajustado ao copo: Ø${P.lens_d}. Ctrl+Z desfaz.`;
 });
+/* ---------- indicação do parâmetro no objeto (passar o mouse no campo) ---------- */
+// cada indicador está no plano do perfil: [raio, altura]; segs = cotas, rings = círculos, pts = cantos, polys = trechos
+const EMB_KEYS = new Set(EMB_SPEC.flatMap(([, it]) => it.map(i => i[0])));
+function embInd(p, k) {
+  const e = embDims(p), rd = rimDims(p), H = p.em_rim_h, s = p.em_sheet, top = r => H + e.backZ(r), o = { segs: [], rings: [], pts: [], polys: [] };
+  const aEnd = [rd.cx + rd.rc * Math.cos(rd.aE), H - rd.rc + rd.rc * Math.sin(rd.aE)];
+  const foot = [aEnd[0] + aEnd[1] * Math.tan(rd.t), 0], zMax = rd.t >= 0 ? 0 : aEnd[1], flat0 = Math.max(e.stepR, e.viewR);
+  const curve = (f, r0, r1, n = 60) => Array.from({ length: n + 1 }, (_, i) => { const r = r0 + (r1 - r0) * i / n; return [r, f(r)]; });
+  switch (k) {
+    case 'em_cup_od': o.segs.push([-e.cupR, zMax, e.cupR, zMax]); o.rings.push([e.cupR, zMax]); break;
+    case 'disc_d': o.segs.push([-e.viewR, top(e.viewR) + 0.4, e.viewR, top(e.viewR) + 0.4]); o.rings.push([e.viewR, top(e.viewR)]); break;
+    case 'emblem_h': o.segs.push([e.cupR + 2, 0, e.cupR + 2, p.emblem_h]); break;
+    case 'em_rim_h': o.segs.push([e.cupR + 1, 0, e.cupR + 1, H]); break;
+    case 'em_sheet': { const r = (flat0 + rd.cx) / 2; o.segs.push([r, H - s, r, H]); o.pts.push([r, H - s], [r, H]); break; }
+    case 'em_lip_flat': o.segs.push([flat0, H + 0.25, Math.max(flat0, rd.cx), H + 0.25]); break;
+    case 'em_taper': o.polys.push([aEnd, foot]); break;
+    case 'em_step': o.segs.push([e.viewR - 0.3, H - (p.em_step || 0), e.viewR - 0.3, H]); break;
+    case 'em_step_ang': o.polys.push(curve(top, e.viewR - 0.2, e.stepR + 0.2, 24)); break;
+    case 'em_relief': case 'em_ridges': case 'em_ridge_w': {
+      const k2 = p.disc_d / 100, xs = k === 'em_relief' ? [0.5] : [10.5, 12.8, 16.6].map(x => x * k2);
+      for (const x of xs) { o.segs.push([x, top(x), x, top(x) + p.em_relief]); o.pts.push([x, top(x) + p.em_relief]); }
+      break;
+    }
+    case 'em_over': case 'em_film': { const lp = lensProfileE(p).filter(([r]) => r > rd.cx - 0.01).map(([r, z]) => [r, z + e.zBack]); o.polys.push(lp); if (k === 'em_film') o.pts.push(aEnd); break; }
+    case 'em_lens_edge': o.segs.push([rd.cx, H, rd.cx, H + p.em_lens_edge]); break;
+    case 'em_gap': o.segs.push([e.lensR, H + 0.3, rd.cx, H + 0.3]); break;
+    case 'em_back_par': case 'em_back': o.polys.push(curve(top, 0, e.viewR)); o.segs.push([0, H - (p.em_step || 0), 0, top(0)]); break;
+    default: return null;
+  }
+  return o;
+}
+function knobInd(p, k) {
+  if (EMB_KEYS.has(k)) { const o = embInd(p, k); if (!o) return null; const dz = p.H - p.lens_h - embedDepth(p), sh = ([r, z]) => [r, z + dz];
+    return { segs: o.segs.map(([a, b, c, d]) => [a, b + dz, c, d + dz]), rings: o.rings.map(sh), pts: o.pts.map(sh), polys: o.polys.map(l => l.map(sh)) }; }
+  const { pts, Hb, R, Rl, Rb } = profile(p), o = { segs: [], rings: [], pts: [], polys: [] };
+  const sz = p.shoulder_link ? p.groove_z : p.shoulder_z, g0 = p.groove_z - p.groove_w / 2, g1 = p.groove_z + p.groove_w / 2;
+  const span = (z0, z1) => pts.filter(([r, z]) => r > 0 && z >= z0 - 1e-6 && z <= z1 + 1e-6), at = z => radiusAt(pts, z);
+  const zR = pts.reduce((m, q) => q[0] > m[0] ? q : m, [0, 0])[1];
+  switch (k) {
+    case 'H': o.segs.push([R + 4, 0, R + 4, p.H]); break;
+    case 'D': o.segs.push([-R, zR, R, zR]); o.rings.push([R, zR]); break;
+    case 'skirt_curve': case 'skirt_bulge': o.polys.push(span(p.lip_h, sz)); break;
+    case 'skirt_bulge_pos': { const z = p.lip_h + (sz - p.lip_h) * p.skirt_bulge_pos; o.rings.push([at(z), z]); o.pts.push([at(z), z]); break; }
+    case 'shoulder_z': o.rings.push([at(sz), sz]); break;
+    case 'shoulder_angle': case 'shoulder_full': o.polys.push(span(sz, Hb)); break;
+    case 'shoulder_link': case 'groove_z': o.rings.push([at(p.groove_z) , p.groove_z]); break;
+    case 'groove_w': o.segs.push([R + 2, g0, R + 2, g1]); o.rings.push([at(g0), g0], [at(g1), g1]); break;
+    case 'groove_depth': { const r = Math.max(at(g0 - 0.3), at(g1 + 0.3)); o.segs.push([r - p.groove_depth, p.groove_z, r, p.groove_z]); break; }
+    case 'ressalto': o.segs.push([R - p.ressalto, sz, R, sz]); o.polys.push(span(sz - 2, sz + 2)); break;
+    case 'lens_d': o.segs.push([-Rl, Hb, Rl, Hb]); o.rings.push([Rl, Hb]); break;
+    case 'lens_h': o.segs.push([Rl + 3, Hb, Rl + 3, p.H]); break;
+    case 'bottom_d': o.segs.push([-Rb, 0, Rb, 0]); o.rings.push([Rb, 0]); break;
+    case 'lip_h': o.segs.push([Rb + p.lip_w + 1.5, 0, Rb + p.lip_w + 1.5, p.lip_h]); break;
+    case 'lip_w': o.segs.push([Rb, p.lip_h, Rb + p.lip_w, p.lip_h]); break;
+    case 'bore_d': o.segs.push([-p.bore_d / 2, p.bore_h, p.bore_d / 2, p.bore_h]); o.rings.push([p.bore_d / 2, p.bore_h]); break;
+    case 'bore_h': o.segs.push([0, 0, 0, p.bore_h]); break;
+    case 'free_body': o.polys.push(pts.filter(([r]) => r > 0)); break;
+    case 'r_base': o.pts.push([Rb + (p.lip_h > 0 ? p.lip_w : 0), 0]); break;
+    case 'r_lip': o.pts.push([Rb + p.lip_w, p.lip_h], [Rb, p.lip_h]); break;
+    case 'r_groove': o.pts.push([at(g0 - 0.2), g0], [at(g1 + 0.2), g1]); break;
+    default: return null;
+  }
+  return o;
+}
+let hoverKey = null;
+const hoverMat = new THREE.LineBasicMaterial({ color: 0xffb020, depthTest: false, transparent: true });
+function hoverMesh(ind) {
+  const g = new THREE.Group(), line = (a, loop) => { const l = new (loop ? THREE.LineLoop : THREE.Line)(new THREE.BufferGeometry().setFromPoints(a), hoverMat); l.renderOrder = 999; g.add(l); };
+  const V = (r, z) => new THREE.Vector3(r, z, 0), circ = (cx, cz, rad, n, flat) => Array.from({ length: n }, (_, i) => { const a = i / n * Math.PI * 2; return flat ? new THREE.Vector3(rad * Math.sin(a), cz, rad * Math.cos(a)) : V(cx + rad * Math.cos(a), cz + rad * Math.sin(a)); });
+  for (const [a, b, c, d] of ind.segs) line([V(a, b), V(c, d)]);
+  for (const l of ind.polys) if (l.length > 1) line(l.map(([r, z]) => V(r, z)));
+  for (const [r, z] of ind.rings) line(circ(0, z, r, 96, true), true);
+  for (const [r, z] of ind.pts) line(circ(r, z, 0.6, 20), true);
+  return g;
+}
+function hoverSVG(ind, w) {
+  if (!ind) return '';
+  const st = `stroke="#ffb020" stroke-width="${w}" fill="none" stroke-linecap="round"`;
+  let out = '';
+  for (const [a, b, c, d] of ind.segs) out += `<line x1="${a}" y1="${-b}" x2="${c}" y2="${-d}" ${st}/>`;
+  for (const l of ind.polys) out += `<polyline points="${l.map(([r, z]) => `${r.toFixed(3)},${(-z).toFixed(3)}`).join(' ')}" ${st}/>`;
+  for (const [r, z] of ind.rings) out += `<line x1="${-r}" y1="${-z}" x2="${r}" y2="${-z}" ${st} stroke-dasharray="${w * 3} ${w * 2}"/>`;
+  for (const [r, z] of ind.pts) out += `<circle cx="${r}" cy="${-z}" r="${w * 2.5}" ${st}/>`;
+  return `<g class="hl">${out}</g>`;
+}
+let hoverObjs = [];
+function refreshHover() {
+  for (const [sc, o] of hoverObjs) { sc.remove(o); o.traverse(c => c.geometry && c.geometry.dispose()); }
+  hoverObjs = [];
+  const ki = hoverKey && knobInd(P, hoverKey), ei = hoverKey && EMB_KEYS.has(hoverKey) && embInd(P, hoverKey);
+  if (ki) { const m = hoverMesh(ki); scene.add(m); hoverObjs.push([scene, m]); }
+  if (ei) { const m = hoverMesh(ei); embScene.add(m); hoverObjs.push([embScene, m]); }
+  for (const [el, ind, w] of [[svg, ki, 0.35], [document.getElementById('embProfile'), ei, 0.06]]) {
+    if (!el) continue; el.querySelectorAll('.hl').forEach(n => n.remove()); el.insertAdjacentHTML('beforeend', hoverSVG(ind, w));
+  }
+}
+function setHover(k) { if (k === hoverKey) return; hoverKey = k; refreshHover(); }
+
+/* ---------- perfil em corte do emblema (meia seção pelo eixo x, com o desenho daquela linha) ---------- */
+function drawEmbProfile(p) {
+  const el = document.getElementById('embProfile'); if (!el) return;
+  const e = embDims(p), rd = rimDims(p), H = p.em_rim_h, mask = inkMask(p), lp = lensProfileE(p).map(([r, z]) => [r, z + e.zBack]);
+  const zTop = Math.max(p.emblem_h, ...lp.map(q => q[1])), x0 = -1.5, x1 = e.cupR + 3.5, y0 = -(zTop + 1.2), y1 = 1.2;
+  el.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  const P2 = l => l.map(([r, z]) => `${r.toFixed(3)},${(-z).toFixed(3)}`).join(' ');
+  let g = '';
+  for (let x = Math.ceil(x0 * 2) / 2; x <= x1; x += 0.5) g += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" stroke="var(--${x % 1 ? 'grid' : 'grid-strong'})" stroke-width="${x % 1 ? 0.008 : 0.02}"/>`;
+  for (let y = Math.ceil(y0 * 2) / 2; y <= y1; y += 0.5) g += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="var(--${y % 1 ? 'grid' : 'grid-strong'})" stroke-width="${y % 1 ? 0.008 : 0.02}"/>`;
+  const rel = CUT.show_relief ? p.em_relief : 0, n = 600, rs = Array.from({ length: n + 1 }, (_, i) => e.viewR * i / n);
+  const relTop = rs.map(r => [r, H + e.backZ(r) + rel * mask(r, 0)]), base = rs.map(r => [r, H + e.backZ(r)]).reverse();
+  const metal = `<polygon points="${P2(cupProfile(p))}" fill="var(--chrome)" fill-opacity="0.85" stroke="var(--ink)" stroke-width="0.02"/>`
+    + (rel > 0 ? `<polygon points="${P2(relTop.concat(base))}" fill="var(--chrome)" fill-opacity="0.85" stroke="var(--ink)" stroke-width="0.02"/>` : '');
+  const paint = CUT.show_paint ? `<polyline points="${P2(relTop.map(([r, z]) => [r, z + 0.03]))}" fill="none" stroke="var(--accent)" stroke-width="0.05"/>` : '';
+  const resin = CUT.show_lens ? `<polygon points="${P2(lp)}" fill="#7fb8ff" fill-opacity="0.25" stroke="#7fb8ff" stroke-width="0.03"/>` : '';
+  const axis = `<line x1="0" y1="${y0}" x2="0" y2="${y1}" stroke="var(--accent)" stroke-width="0.02" stroke-dasharray="0.4 0.15 0.08 0.15"/>`;
+  const tx = (x, y, t, a = 'start') => `<text x="${x}" y="${y}" text-anchor="${a}" style="font: 0.42px var(--f-mono); fill: var(--accent)">${t}</text>`;
+  const vd = (x, za, zb, t) => `<line x1="${x}" y1="${-za}" x2="${x}" y2="${-zb}" stroke="var(--accent)" stroke-width="0.02"/><line x1="${x - 0.2}" y1="${-za}" x2="${x + 0.2}" y2="${-za}" stroke="var(--accent)" stroke-width="0.02"/><line x1="${x - 0.2}" y1="${-zb}" x2="${x + 0.2}" y2="${-zb}" stroke="var(--accent)" stroke-width="0.02"/>` + tx(x + 0.3, -(za + zb) / 2 + 0.15, t);
+  const dims = vd(e.cupR + 2, 0, p.emblem_h, `${p.emblem_h}`) + vd(e.cupR + 1, 0, H, `${H}`)
+    + tx(e.viewR, -(H + e.backZ(e.viewR)) + 0.9, `Ø${p.disc_d}`, 'middle') + tx(e.cupR, 0.75, `Ø${p.em_cup_od}`, 'end');
+  el.innerHTML = g + axis + metal + paint + resin + dims;
+  refreshHover();
+}
+
 /* ---------- aba Peças: visualizador de todos os STLs ---------- */
 // STL ASCII ou binário → triângulos em coordenadas do three (Z da impressora vira Y)
 function parseSTL(buf) {
@@ -1675,7 +1800,7 @@ renderVersions();
 buildFields(document.getElementById('fields'), SPEC, P, () => { linkState(); update(); });
 linkState();
 buildFields(document.getElementById('ovfields'), OV, O, () => { drawProfile(P); saveOverlay(); liveDetect(); });
-buildFields(document.getElementById('embfields'), EMB_SPEC, P, update);
+buildFields(document.getElementById('embfields'), EMB_SPEC, P, () => { linkState(); update(); });
 buildFields(document.getElementById('cutfields'), CUT_SPEC, CUT, applyCut);
 applyTheme(); resize(); update();
 liveDetect();
