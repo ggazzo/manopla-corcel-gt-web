@@ -291,7 +291,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45, die_margin: 6, die_base: 4, die_clear: 0.1, punch_h: 8, die_relief: 1 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -304,6 +304,7 @@ const SPEC = [
 const EMB_SPEC = [
   ['Medidas gerais', [['em_cup_od', 'Diâmetro externo', 25, 60, 0.01], ['disc_d', 'Área pintada (Ø)', 10, 65, 0.05], ['emblem_h', 'Altura total (pé da saia ao topo da resina)', 1, 12, 0.05], ['em_rim_h', 'Altura da saia (até o topo do metal)', 1, 8, 0.05]]],
   ['Disco de alumínio', [['em_sheet', 'Espessura da chapa', 0.1, 1.5, 0.05], ['em_lip_flat', 'Bordinha reta da aba', 0, 5, 0.05], ['em_taper', 'Inclinação da saia (°; + abre para baixo)', -30, 30, 0.5], ['em_step', 'Degrau entre a pintura e a aba (+ = centro afundado)', -2, 2, 0.05], ['em_step_ang', 'Inclinação do degrau (°)', 10, 89, 1], ['em_relief', 'Altura do relevo (face de cima)', 0, 2, 0.05], ['em_ridges', 'Divisórias nas bordas das faixas', 'bool'], ['em_ridge_w', 'Largura das divisórias', 0.2, 1.5, 0.05]]],
+  ['Matriz do copo (estampar)', [['die_margin', 'Parede da matriz em volta do disco', 2, 20, 0.5], ['die_base', 'Fundo da matriz (abaixo da cavidade)', 1, 15, 0.5], ['die_clear', 'Folga do punção além da chapa', 0, 0.5, 0.02], ['punch_h', 'Altura do punção abaixo do pé da saia', 2, 30, 0.5], ['die_relief', 'Copiar o relevo do desenho na matriz e no punção', 'bool']]],
   ['Resina', [['em_over', 'Resina cobre a dobra do metal', 'bool'], ['em_lens_edge', 'Espessura na beirada (sobre a aba)', 0.3, 4, 0.05], ['em_film', 'Película na lateral da dobra', 0.05, 2, 0.05], ['em_gap', 'Folga até a dobra (sem cobrir a dobra)', 0, 0.5, 0.05], ['em_back_par', 'Estampa paralela à frente da resina', 'bool'], ['em_back', 'Abaulado da estampa (sem o paralelo; 0 = plana)', 0, 5, 0.05]]],
 ];
 // campos que só valem com outro ligado/desligado ficam desativados
@@ -518,7 +519,7 @@ const matLens = new THREE.MeshPhysicalMaterial({ color: 0xeaf4ff, roughness: 0.0
 const matRing = new THREE.MeshStandardMaterial({ color: 0xd7dde2, metalness: 0.9, roughness: 0.22 });
 const matDisc = new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.7 });
 const knobEmbMats = {
-  cup: new THREE.MeshStandardMaterial({ color: 0xd7dde2, metalness: 0.9, roughness: 0.22 }),
+  cup: new THREE.MeshStandardMaterial({ color: 0x8c949b, metalness: 0.9, roughness: 0.38, envMapIntensity: 0.8 }),
   lens: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.12, envMapIntensity: 0.5, depthWrite: false, side: THREE.DoubleSide }),
   relief: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.025, envMapIntensity: 0.15, depthWrite: false, side: THREE.DoubleSide }),
   paint: new THREE.MeshStandardMaterial({ map: discTexture(), roughness: 0.6, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide }),
@@ -862,15 +863,18 @@ function rimDimsRaw(p, cupR, viewR) {
 function rimDims(p) { return rimDimsRaw(p, p.em_cup_od / 2, p.disc_d / 2); }
 // disco de alumínio inteiro: centro estampado abaulado (com o relevo), aba, dobra e saia
 // r1 > 0 deixa o centro aberto para as faces estampadas (stampGeometry)
-function cupProfile(p, r1 = 0) {
-  const e = embDims(p), { rc, s, cx, t, aE } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [], span = Math.PI / 2 - aE;
+function cupProfile(p, r1 = 0) { const c = discCurves(p, r1); return c.outer.concat(c.inner); }
+// face de fora (do eixo, por cima, até o pé da saia) e face de dentro (do pé de volta ao eixo); s = espessura
+function discCurves(p, r1 = 0, s = p.em_sheet) {
+  const e = embDims(p), { rc, cx, t, aE } = rimDims(p), H = p.em_rim_h, n = 12, nd = 32, out = [], span = Math.PI / 2 - aE;
   const ri = rc - s, zi = H - rc - ri * Math.sin(t), rIn = cx + ri * Math.cos(t) + zi * Math.tan(t);  // pé da saia por dentro
   for (let i = 0; i <= nd; i++) { const r = r1 + (e.stepR - r1) * i / nd; out.push([r, H + e.backZ(r)]); }
   for (let i = 0; i <= n; i++) { const a = Math.PI / 2 - span * i / n; out.push([cx + rc * Math.cos(a), H - rc + rc * Math.sin(a)]); }   // dobra por fora
-  const zo = H - rc - rc * Math.sin(t); out.push([cx + rc * Math.cos(t) + zo * Math.tan(t), 0], [rIn, 0]);
+  const zo = H - rc - rc * Math.sin(t); out.push([cx + rc * Math.cos(t) + zo * Math.tan(t), 0]);
+  const outer = out.splice(0); out.push([rIn, 0]);
   for (let i = n; i >= 0; i--) { const a = Math.PI / 2 - span * i / n; out.push([cx + ri * Math.cos(a), H - rc + ri * Math.sin(a)]); }  // por dentro
   for (let i = nd; i >= 0; i--) { const r = r1 + (e.stepR - r1) * i / nd; out.push([r, H - s + e.backZ(r)]); }
-  return out;
+  return { outer, inner: out };
 }
 // faces do centro estampado em malha polar até a área visível: o desenho salta em_relief na face de cima e o
 // verso fica liso, para o relevo ser sólido na impressão; o anel externo coincide com o torno de STAMP_SEG lados
@@ -914,8 +918,25 @@ function discTriangles(p) {
   const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; }
   return a;
 }
-function dieProfile(p) { const e = embDims(p), H = p.em_rim_h + 6, R = e.cupR + 8; return [[0, 0], [R, 0], [R, H], [e.cupR + 0.05, H], [e.cupR + 0.05, 6], [0, 6]]; }
-function punchProfile(p) { const e = embDims(p); return [[0, 0], [e.cupR - p.em_sheet - 0.05, 0], [e.cupR - p.em_sheet - 0.05, 15], [0, 15]]; }
+// matriz (fêmea): bloco com a cavidade da face de fora do disco, de boca para cima (o disco entra de cabeça para baixo)
+function dieTriangles(p) {
+  const e = embDims(p), H = p.em_rim_h, rel = p.die_relief ? p.em_relief : 0, rs = Array.from({ length: 65 }, (_, i) => e.stepR * i / 64);
+  const hm = p.die_base + Math.max(...rs.map(r => H + e.backZ(r))) + rel, Rm = e.cupR + p.die_margin, R1 = e.viewR;
+  const flip = ([r, z]) => [r, hm - z], out = discCurves(p, R1).outer.slice().reverse().map(flip);
+  const prof = [[0, 0], [Rm, 0], [Rm, hm]].concat(out);
+  // o fundo da cavidade é a face de cima espelhada; o espelho já vira as faces para dentro do bloco
+  const g = stampGeometry(p, 'top', rel), pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setY(i, hm - pos.getY(i));
+  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
+}
+// punção (macho): a face de dentro do disco com chapa + folga, descendo punch_h abaixo do pé; base plana em z = 0
+function punchTriangles(p) {
+  const s2 = p.em_sheet + p.die_clear, rel = p.die_relief ? p.em_relief : 0, inn = discCurves(p, embDims(p).viewR, s2).inner;
+  const prof = [[0, 0], [inn[0][0], 0]].concat(inn.map(([r, z]) => [r, z + p.punch_h]));
+  const g = stampGeometry(p, 'top', rel); g.translate(0, p.punch_h - s2, 0);  // a chapa sobe junto com o relevo
+  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
+}
+function joinTris(parts) { const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; } return a; }
 
 const embHost = document.getElementById('embThree');
 const embRenderer = new THREE.WebGLRenderer({ antialias: true });
@@ -927,7 +948,8 @@ const embKey = new THREE.DirectionalLight(0xffffff, 1.0); embKey.position.set(-6
 const embRim = new THREE.DirectionalLight(0xffffff, 0.5); embRim.position.set(60, -40, -60); embScene.add(embRim);
 embScene.environment = studioEnv(embRenderer);
 const cutPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
-const matCup = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide });
+// alumínio mais escuro que a tinta branca, para o branco aparecer
+const matCup = new THREE.MeshStandardMaterial({ color: 0x8c949b, metalness: 0.9, roughness: 0.38, envMapIntensity: 0.8, side: THREE.DoubleSide });
 // resina cristal: quase sem véu, para a pintura do verso aparecer nítida pela frente
 const matLensE = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.12, envMapIntensity: 0.5, side: THREE.DoubleSide, depthWrite: false });
 const matRelief = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, transparent: true, opacity: 0.025, envMapIntensity: 0.15, side: THREE.DoubleSide, depthWrite: false });
@@ -990,7 +1012,7 @@ function exportEmb(which) {
   let a;
   if (which === 'lente') a = lensTriangles(P);
   else if (which === 'copo') a = discTriangles(P);
-  else a = latheTriangles(which === 'matriz' ? dieProfile(P) : punchProfile(P), 200).a;
+  else a = which === 'matriz' ? dieTriangles(P) : punchTriangles(P);
   let z0 = Infinity; for (let i = 1; i < a.length; i += 3) z0 = Math.min(z0, a[i]);
   for (let i = 1; i < a.length; i += 3) a[i] -= z0;  // apoia em z = 0
   download(stlBlob(a), `emblema-${which}.stl`);
@@ -1111,9 +1133,14 @@ function drawEmbProfile(p) {
   for (let y = Math.ceil(y0 * 2) / 2; y <= y1; y += 0.5) g += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="var(--${y % 1 ? 'grid' : 'grid-strong'})" stroke-width="${y % 1 ? 0.008 : 0.02}"/>`;
   const rel = CUT.show_relief ? p.em_relief : 0, n = 600, rs = Array.from({ length: n + 1 }, (_, i) => e.viewR * i / n);
   const relTop = rs.map(r => [r, H + e.backZ(r) + rel * mask(r, 0)]), base = rs.map(r => [r, H + e.backZ(r)]).reverse();
-  const metal = `<polygon points="${P2(cupProfile(p))}" fill="var(--chrome)" fill-opacity="0.85" stroke="var(--ink)" stroke-width="0.02"/>`
-    + (rel > 0 ? `<polygon points="${P2(relTop.concat(base))}" fill="var(--chrome)" fill-opacity="0.85" stroke="var(--ink)" stroke-width="0.02"/>` : '');
-  const paint = CUT.show_paint ? `<polyline points="${P2(relTop.map(([r, z]) => [r, z + 0.03]))}" fill="none" stroke="var(--accent)" stroke-width="0.05"/>` : '';
+  const metal = `<polygon points="${P2(cupProfile(p))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>`
+    + (rel > 0 ? `<polygon points="${P2(relTop.concat(base))}" fill="#6f777e" stroke="#c7ccd0" stroke-width="0.02"/>` : '');
+  // pintura com as cores reais da arte naquela linha (branco, vermelho, preto)
+  let paint = '';
+  if (CUT.show_paint) {
+    const row = matPaint.map.image.getContext('2d').getImageData(0, 256, 512, 1).data, col = r => { const i = Math.min(511, Math.round((r / e.viewR + 1) / 2 * 511)) * 4; return `rgb(${row[i]},${row[i + 1]},${row[i + 2]})`; };
+    for (let i = 0; i < n; i++) paint += `<line x1="${relTop[i][0]}" y1="${-(relTop[i][1] + 0.04)}" x2="${relTop[i + 1][0]}" y2="${-(relTop[i + 1][1] + 0.04)}" stroke="${col(relTop[i][0])}" stroke-width="0.08"/>`;
+  }
   const resin = CUT.show_lens ? `<polygon points="${P2(lp)}" fill="#7fb8ff" fill-opacity="0.25" stroke="#7fb8ff" stroke-width="0.03"/>` : '';
   const axis = `<line x1="0" y1="${y0}" x2="0" y2="${y1}" stroke="var(--accent)" stroke-width="0.02" stroke-dasharray="0.4 0.15 0.08 0.15"/>`;
   const tx = (x, y, t, a = 'start') => `<text x="${x}" y="${y}" text-anchor="${a}" style="font: 0.42px var(--f-mono); fill: var(--accent)">${t}</text>`;
@@ -1141,8 +1168,8 @@ const PARTS = [
   ['Manopla', 'corpo', 'Corpo', () => latheTriangles(bodySolidProfile(P), 200).a],
   ['Emblema', 'lente', 'Lente de resina', () => lensTriangles(P)],
   ['Emblema', 'copo', 'Disco de alumínio', () => discTriangles(P)],
-  ['Emblema', 'matriz', 'Matriz do copo', () => latheTriangles(dieProfile(P), 200).a],
-  ['Emblema', 'puncao', 'Punção do copo', () => latheTriangles(punchProfile(P), 200).a],
+  ['Emblema', 'matriz', 'Matriz do copo', () => dieTriangles(P)],
+  ['Emblema', 'puncao', 'Punção do copo', () => punchTriangles(P)],
   ['Medidor de perfil', 'stl/medidor/pinos.stl', 'Hastes (lote de 35)', null],
   ['Medidor de perfil', 'stl/medidor/base.stl', 'Base', null],
   ['Medidor de perfil', 'stl/medidor/tampa.stl', 'Tampa', null],
@@ -1159,7 +1186,7 @@ const pKey = new THREE.DirectionalLight(0xffffff, 0.9); pKey.position.set(-1, 2,
 const pRim = new THREE.DirectionalLight(0xffffff, 0.4); pRim.position.set(1, -0.5, -1); partsScene.add(pRim);
 partsScene.environment = studioEnv(partsRenderer);
 const partCut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
-const matPart = new THREE.MeshStandardMaterial({ color: 0xb8c0c6, roughness: 0.45, metalness: 0.15, side: THREE.DoubleSide });
+const matPart = new THREE.MeshStandardMaterial({ color: 0x7f878e, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide });
 const matWire = new THREE.MeshBasicMaterial({ color: 0x3fd29a, wireframe: true, transparent: true, opacity: 0.25 });
 let partMesh = null, partSel = 'corpo', partArr = null, staticCache = {};
 (function () {
