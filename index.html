@@ -314,7 +314,7 @@ button:disabled { opacity: .45; cursor: default; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45, die_margin: 6, die_base: 4, die_clear: 0.1, punch_h: 8, die_relief: 1, punch_narrow: 0.1 };
+const DEFAULTS = { H: 56, D: 44, skirt_curve: 1.4, lens_d: 38.25, lens_top_d: 38.25, lens_h: 4, lens_dome: 2, shoulder_angle: 60, shoulder_full: 0.55, groove_z: 40, groove_w: 0.8, groove_depth: 0.7, ressalto: 0.9, bottom_d: 31, lip_h: 3, lip_w: 0.5, bore_d: 16, bore_h: 28, r_base: 0.5, r_lip: 0.3, r_groove: 0.2, r_lens: 1, skirt_bulge: 0, disc_d: 30.75, shoulder_z: 40, shoulder_link: 1, skirt_bulge_pos: 0.5, emb_relief: 0.4, emb_sheet: 0.3, emb_draft: 0.35, emb_raised: 1, emb_block: 6, emb_margin: 7, free_body: 0, emblem_h: 5, em_cup_od: 38.23, em_rim_h: 3, em_sheet: 0.4, em_lens_edge: 1.5, em_relief: 0.75, em_gap: 0.15, em_ridges: 1, em_ridge_w: 0.5, em_taper: 0, em_back: 2.4, em_lip_flat: 1, em_over: 1, em_film: 0.3, em_back_par: 1, em_step: 0.4, em_step_ang: 45, die_margin: 6, die_base: 4, die_clear: 0.1, punch_h: 8, die_relief: 1, punch_narrow: 0.1, die_pins: 1, pin_d: 3, pin_clear: 0.2, flange_t: 4, pin_h: 0 };
 const SPEC = [
   ['Corpo', [['H', 'Altura total', 30, 90, 0.5], ['D', 'Diâmetro do ombro (máx.)', 25, 70, 0.5], ['skirt_curve', 'Curva da saia (1 = reta)', 0.5, 3, 0.05], ['skirt_bulge', 'Barriga da saia (+ para fora, − para dentro)', -6, 8, 0.1], ['skirt_bulge_pos', 'Altura da barriga (0 = embaixo, 1 = em cima)', 0.1, 0.9, 0.01]]],
   ['Ombro', [['shoulder_z', 'Altura do ombro (da base)', 10, 80, 0.5], ['shoulder_angle', 'Ângulo de chegada na lente (0 = deitado, 90 = em pé)', 0, 90, 1], ['shoulder_full', 'Cheio do ombro', 0.1, 1, 0.01]]],
@@ -332,11 +332,12 @@ const EMB_SPEC = [
 const DIE_SPEC = [
   ['Matriz (fêmea)', [['die_margin', 'Parede em volta do disco', 2, 20, 0.5], ['die_base', 'Fundo abaixo da cavidade', 1, 15, 0.5], ['die_relief', 'Copiar o relevo do desenho', 'bool']]],
   ['Punção (macho)', [['punch_h', 'Altura abaixo do pé da saia', 2, 30, 0.5], ['die_clear', 'Folga além da espessura da chapa', 0, 0.5, 0.02], ['punch_narrow', 'Estreitar o relevo do punção (cada lado)', 0, 1, 0.02]]],
+  ['Alinhamento', [['die_pins', 'Pinos guia na matriz e aba furada no punção', 'bool'], ['pin_d', 'Diâmetro dos pinos', 1.5, 8, 0.1], ['pin_clear', 'Folga dos furos', 0, 0.6, 0.05], ['flange_t', 'Espessura da aba do punção', 1.5, 12, 0.5], ['pin_h', 'Altura dos pinos (0 = automática)', 0, 40, 0.5]]],
 ];
 const DV = { dv_gap: 10, dv_cut: 1, dv_die: 1, dv_disc: 1, dv_punch: 1 };
 const DV_SPEC = [['Vista', [['dv_gap', 'Afastar as peças', 0, 30, 0.5], ['dv_cut', 'Em corte', 'bool'], ['dv_die', 'Matriz', 'bool'], ['dv_disc', 'Disco estampado', 'bool'], ['dv_punch', 'Punção', 'bool']]]];
 // campos que só valem com outro ligado/desligado ficam desativados
-const DEPENDS = { punch_narrow: p => p.die_relief, em_back: p => !p.em_back_par, em_gap: p => !p.em_over, em_film: p => p.em_over, em_ridge_w: p => p.em_ridges, shoulder_z: p => !p.shoulder_link };
+const DEPENDS = { pin_d: p => p.die_pins, pin_clear: p => p.die_pins, flange_t: p => p.die_pins, pin_h: p => p.die_pins, punch_narrow: p => p.die_relief, em_back: p => !p.em_back_par, em_gap: p => !p.em_over, em_film: p => p.em_over, em_ridge_w: p => p.em_ridges, shoulder_z: p => !p.shoulder_link };
 const CUT = { cut_on: 1, cut_pos: 0, show_lens: 1, show_relief: 1, show_paint: 1, show_cup: 1 };
 const CUT_SPEC = [['Plano de corte', [['cut_on', 'Mostrar em corte', 'bool'], ['cut_pos', 'Posição do corte (mm do centro)', -20, 20, 0.1]]],
   ['Mostrar', [['show_lens', 'Lente', 'bool'], ['show_relief', 'Relevo estampado', 'bool'], ['show_paint', 'Pintura', 'bool'], ['show_cup', 'Disco de alumínio', 'bool']]]];
@@ -973,16 +974,38 @@ function dieTriangles(p) {
   const g = stampGeometry(p, 'top', rel), pos = g.attributes.position, ix = g.index.array;
   for (let i = 0; i < pos.count; i++) { pos.setY(i, hm - pos.getY(i)); pos.setZ(i, -pos.getZ(i)); }
   for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }  // a meia volta deixa as faces viradas para fora da cavidade
-  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
+  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array].concat(p.die_pins ? pinsTriangles(p, hm) : []));
 }
 // punção (macho): a face de dentro do disco com chapa + folga, abaulada, com o relevo que empurra a chapa
 // (largura do desenho menos punch_narrow de cada lado); desce punch_h abaixo do pé, base plana em z = 0.
 // Impresso de ponta para cima, ele vira de cabeça para baixo para prensar e o desenho fica na posição certa
 function punchTriangles(p) {
   const s2 = p.em_sheet + p.die_clear, rel = p.die_relief ? p.em_relief : 0, inn = discCurves(p, embDims(p).viewR, s2).inner;
-  const prof = [[0, 0], [inn[0][0], 0]].concat(inn.map(([r, z]) => [r, z + p.punch_h]));
+  const y0 = p.die_pins ? p.flange_t - 0.01 : 0;  // com a aba, o corpo começa em cima dela (as duas se sobrepõem 0,01)
+  const prof = [[0, y0], [inn[0][0], y0]].concat(inn.map(([r, z]) => [r, z + p.punch_h]));
   const g = stampGeometry(p, 'top', rel, p.punch_narrow || 0); g.translate(0, p.punch_h - s2, 0);
-  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array]);
+  return joinTris([latheTriangles(prof, STAMP_SEG).a, g.toNonIndexed().attributes.position.array].concat(p.die_pins ? [flangeTriangles(p)] : []));
+}
+// pinos guia: três, em ângulos desiguais, para o punção só entrar numa posição (o desenho espelhado casa)
+const PIN_ANG = [20, 140, 250];
+function pinLayout(p) {
+  const e = embDims(p), Rm = e.cupR + p.die_margin, r = (e.cupR + Rm) / 2;
+  const h = p.pin_h > 0 ? p.pin_h : Math.max(2, p.punch_h - p.flange_t) + p.em_rim_h + 3;  // entra nos furos antes do punção tocar a chapa
+  return { r, h, Rm, pts: PIN_ANG.map(a => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)]) };
+}
+function pinsTriangles(p, y0) {
+  const L = pinLayout(p), parts = [];
+  for (const [x, z] of L.pts) { const g = new THREE.CylinderGeometry(p.pin_d / 2, p.pin_d / 2, L.h + 0.5, 32); g.translate(x, y0 + (L.h - 0.5) / 2, z); parts.push(g.toNonIndexed().attributes.position.array); }
+  return parts;
+}
+// aba do punção (impresso de ponta para cima): disco do tamanho da matriz com os furos dos pinos espelhados,
+// porque o punção vira de cabeça para baixo (meia volta no eixo x) para prensar
+function flangeTriangles(p) {
+  const L = pinLayout(p), sh = new THREE.Shape(); sh.absarc(0, 0, L.Rm, 0, Math.PI * 2, false);
+  for (const [x, z] of L.pts) { const h = new THREE.Path(); h.absarc(x, -z, (p.pin_d + p.pin_clear) / 2, 0, Math.PI * 2, true); sh.holes.push(h); }
+  const g = new THREE.ExtrudeGeometry(sh, { depth: p.flange_t, bevelEnabled: false, curveSegments: 48 });
+  g.rotateX(Math.PI / 2); g.translate(0, p.flange_t, 0);  // shape (x, y) vira (x, z = y) com a espessura de 0 a flange_t
+  return g.toNonIndexed().attributes.position.array;
 }
 function joinTris(parts) { const a = new Float32Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { a.set(x, o); o += x.length; } return a; }
 
@@ -1229,7 +1252,8 @@ function buildDie() {
   for (const k in dieMesh) dieScene.add(dieMesh[k]);
   placeDie();
   const s2 = P.em_sheet + P.die_clear;
-  document.getElementById('dieinfo').textContent = `Matriz Ø${(2 * (e.cupR + P.die_margin)).toFixed(1)} × ${dieHm.toFixed(2)} mm. Punção Ø${(2 * discCurves(P, 0, s2).inner[0][0]).toFixed(2)} mm. Folga entre as duas faces: ${s2.toFixed(2)} mm (chapa ${P.em_sheet} + ${P.die_clear}). Relevo ${rel ? `de ${P.em_relief} mm, espelhado na matriz` : 'desligado'}. Mesmas medidas do disco da aba Emblema.`;
+  const L = pinLayout(P);
+  document.getElementById('dieinfo').textContent = (P.die_pins ? `Pinos Ø${P.pin_d} × ${L.h.toFixed(1)} mm no raio ${L.r.toFixed(1)}; ${P.punch_h <= P.flange_t ? '⚠ aumente a altura do punção acima da espessura da aba. ' : ''}` : '') + `Matriz Ø${(2 * (e.cupR + P.die_margin)).toFixed(1)} × ${dieHm.toFixed(2)} mm. Punção Ø${(2 * discCurves(P, 0, s2).inner[0][0]).toFixed(2)} mm. Folga entre as duas faces: ${s2.toFixed(2)} mm (chapa ${P.em_sheet} + ${P.die_clear}). Relevo ${rel ? `de ${P.em_relief} mm, espelhado na matriz` : 'desligado'}. Mesmas medidas do disco da aba Emblema.`;
 }
 function buildDieSoon() { clearTimeout(dieTimer); dieTimer = setTimeout(buildDie, 200); }
 function placeDie() {
