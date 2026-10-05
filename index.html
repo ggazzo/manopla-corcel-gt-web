@@ -529,18 +529,47 @@ function studioEnv(r) {
 }
 scene.environment = studioEnv(renderer);
 
-function discTexture() {
-  const c = document.createElement('canvas'); c.width = c.height = 512;
-  const g = c.getContext('2d'), s = 512 / 100;
-  g.translate(256, 256); g.scale(s, s);
-  g.fillStyle = '#F4F1E8'; g.beginPath(); g.arc(0, 0, 50, 0, 7); g.fill();
-  g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip();
-  g.fillStyle = '#A3232A'; g.fillRect(-10.5, -60, 21, 120); g.fillRect(-16.6, -60, 3.8, 120); g.fillRect(12.8, -60, 3.8, 120);
+/* ---------- arte do disco (100 unidades = área pintada; y para baixo), medida na foto da frente ---------- */
+// números desenhados como na foto: traço ~18% da altura, "1" com bandeira curta, "3" de topo redondo, "4" com a perna passando da barra
+const ART = {
+  stripes: [[-12.8, 25.6], [-18.2, 3.4], [14.8, 3.4]],        // [x inicial, largura]
+  ridges: [-18.2, -14.8, -12.8, 12.8, 14.8, 18.2],            // bordas das faixas (divisórias em relevo)
+  lineW: 2.6,
+  lines: [[-35.9, 4, 32.3, 4], [-27.7, -5.6, -27.7, 13.1], [-35.9, 4, -35.9, 13.1], [32.3, -4.3, 32.3, 15]],  // centros, ponta quadrada
+  // [número, canto de cima à esquerda, largura]; altura glyphH
+  glyphH: 10, glyphs: [['1', -31.6, -20.1, 4.2], ['3', 28.55, -20.1, 7.3], ['R', -37.0, 16.8, 7.3], ['2', -28.0, 16.8, 7.1], ['4', 28.1, 18.6, 8.2]],
+};
+// esqueleto de cada número com altura 10 e traço 1,8 (ponta reta; o recorte em 0..10 deixa topo e base planos)
+const GLYPH_W = { '1': 4.1, '2': 6.6, '3': 6.55, '4': 7.2, 'R': 6.85 };
+function drawGlyph(g, ch) {
+  const w = 1.8, h = w / 2, ln = (...p) => { g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]); g.stroke(); };
+  g.save(); g.beginPath(); g.rect(-1, 0, 10, 10); g.clip();
+  g.lineWidth = w; g.lineCap = 'butt'; g.lineJoin = 'miter';
+  if (ch === '1') { g.fillRect(2.3, 0, w, 10); g.beginPath(); g.moveTo(2.3, 0); g.lineTo(2.9, 0); g.lineTo(2.9, 1.7); g.lineTo(0.4, 2.7); g.lineTo(0.4, 1.0); g.closePath(); g.fill(); }
+  else if (ch === 'R') { g.fillRect(0, 0, w, 10); g.beginPath(); g.moveTo(0.8, h); g.lineTo(3.9, h); g.arc(3.9, 2.95, 2.05, -Math.PI / 2, Math.PI / 2); g.lineTo(0.8, 5.0); g.stroke(); ln(3.5, 4.8, 6.1, 10.5); }
+  else if (ch === '2') { g.beginPath(); g.arc(3.35, 3.0, 2.1, Math.PI * 0.95, Math.PI * 2 + 0.45); g.lineTo(1.0, 9.1); g.stroke(); ln(0, 10 - h, 6.6, 10 - h); }
+  else if (ch === '3') { g.beginPath(); g.arc(3.4, 2.65, 1.75, Math.PI * 1.05, Math.PI * 2.5); g.stroke(); g.beginPath(); g.arc(3.55, 7.0, 2.1, -Math.PI / 2, Math.PI * 0.9); g.stroke(); ln(2.5, 4.65, 3.6, 4.65); }
+  else if (ch === '4') { ln(5.3, 0, 5.3, 10); ln(5.2, 0.4, 0.6, 7.2); ln(0, 7.4, 7.2, 7.4); }
   g.restore();
-  g.strokeStyle = '#1A1A1A'; g.lineWidth = 2.6; g.lineCap = 'butt';
-  [[-37, -2, 29, -2], [-29, -11, -29, 10], [-37, -3.3, -37, 10], [29, -11, 29, 10]].forEach(([a, b, x, y]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); });
-  g.fillStyle = '#1A1A1A'; g.font = '500 9.5px Helvetica, Arial, sans-serif'; g.textAlign = 'center';
-  [['1', -29, -13.5], ['R', -37.5, 21], ['2', -28.5, 21], ['3', 29, -13.5], ['4', 29, 21]].forEach(([t, x, y]) => g.fillText(t, x, y));
+}
+// desenha a arte no canvas já em unidades (centro em 0); paint = fundo e faixas também; ridgeW = divisórias (unidades)
+function drawArt(g, paint, ridgeW) {
+  if (paint) {
+    g.fillStyle = '#F4F1E8'; g.beginPath(); g.arc(0, 0, 50, 0, 7); g.fill();
+    g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip(); g.fillStyle = '#A3232A';
+    for (const [x, wd] of ART.stripes) g.fillRect(x, -60, wd, 120);
+    g.restore();
+  }
+  const ink = paint ? '#1A1A1A' : '#000';
+  g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = ART.lineW; g.lineCap = 'square';
+  for (const [a, b, x, y] of ART.lines) { g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); }
+  for (const [ch, x, y, wd] of ART.glyphs) { g.save(); g.translate(x, y); g.scale(wd / GLYPH_W[ch], ART.glyphH / 10); g.strokeStyle = ink; g.fillStyle = ink; drawGlyph(g, ch); g.restore(); }
+  if (ridgeW > 0) { g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip(); g.fillStyle = ink; for (const x of ART.ridges) g.fillRect(x - ridgeW / 2, -50, ridgeW, 100); g.restore(); }
+}
+function discTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 1024;
+  const g = c.getContext('2d'), s = 1024 / 100;
+  g.translate(512, 512); g.scale(s, s); drawArt(g, true, 0);
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4; return tex;
 }
 const matBody = new THREE.MeshPhysicalMaterial({ color: 0x0c0c0c, roughness: 0.28, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.12, side: THREE.DoubleSide });
@@ -784,11 +813,7 @@ function inkMap(p) {
   if (inkCache && inkCache.key === key) return inkCache;
   const N = 1400, c = document.createElement('canvas'); c.width = c.height = N;
   const g = c.getContext('2d'), u = N / 100; g.translate(N / 2, N / 2); g.scale(u, u); g.fillStyle = '#000';
-  g.lineCap = 'square'; g.lineWidth = 2.6; g.strokeStyle = '#000';
-  [[-37, -2, 29, -2], [-29, -11, -29, 10], [-37, -3.3, -37, 10], [29, -11, 29, 10]].forEach(([a, b, x, y]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(x, y); g.stroke(); });
-  g.font = 'bold 9.7px Arial, Helvetica, sans-serif'; g.textAlign = 'center';
-  [['1', -29, -13.5], ['R', -37.5, 21], ['2', -28.5, 21], ['3', 29, -13.5], ['4', 29, 21]].forEach(([t, x, y]) => g.fillText(t, x, y));
-  if (p.em_ridges) { g.save(); g.beginPath(); g.arc(0, 0, 48, 0, 7); g.clip(); const w = p.em_ridge_w / (p.disc_d / 100); for (const x of [-16.6, -12.8, -10.5, 10.5, 12.8, 16.6]) g.fillRect(x - w / 2, -50, w, 100); g.restore(); }
+  drawArt(g, false, p.em_ridges ? p.em_ridge_w / (p.disc_d / 100) : 0);
   const d = g.getImageData(0, 0, N, N).data;
   inkCache = { key, N, a: d };
   return inkCache;
@@ -1113,7 +1138,7 @@ function embInd(p, k) {
     case 'em_step': o.segs.push([e.viewR - 0.3, H - (p.em_step || 0), e.viewR - 0.3, H]); break;
     case 'em_step_ang': o.polys.push(curve(top, e.viewR - 0.2, e.stepR + 0.2, 24)); break;
     case 'em_relief': case 'em_ridges': case 'em_ridge_w': {
-      const k2 = p.disc_d / 100, xs = k === 'em_relief' ? [0.5] : [10.5, 12.8, 16.6].map(x => x * k2);
+      const k2 = p.disc_d / 100, xs = k === 'em_relief' ? [0.5] : ART.ridges.filter(x => x > 0).map(x => x * k2);
       for (const x of xs) { o.segs.push([x, top(x), x, top(x) + p.em_relief]); o.pts.push([x, top(x) + p.em_relief]); }
       break;
     }
@@ -1210,7 +1235,7 @@ function drawEmbProfile(p) {
   // pintura com as cores reais da arte naquela linha (branco, vermelho, preto)
   let paint = '';
   if (CUT.show_paint) {
-    const row = matPaint.map.image.getContext('2d').getImageData(0, 256, 512, 1).data, col = r => { const i = Math.min(511, Math.round((r / e.viewR + 1) / 2 * 511)) * 4; return `rgb(${row[i]},${row[i + 1]},${row[i + 2]})`; };
+    const row = matPaint.map.image.getContext('2d').getImageData(0, 512, 1024, 1).data, col = r => { const i = Math.min(1023, Math.round((r / e.viewR + 1) / 2 * 1023)) * 4; return `rgb(${row[i]},${row[i + 1]},${row[i + 2]})`; };
     for (let i = 0; i < n; i++) paint += `<line x1="${relTop[i][0]}" y1="${-(relTop[i][1] + 0.04)}" x2="${relTop[i + 1][0]}" y2="${-(relTop[i + 1][1] + 0.04)}" stroke="${col(relTop[i][0])}" stroke-width="0.08"/>`;
   }
   const resin = CUT.show_lens ? `<polygon points="${P2(lp)}" fill="#7fb8ff" fill-opacity="0.25" stroke="#7fb8ff" stroke-width="0.03"/>` : '';
